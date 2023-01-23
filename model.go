@@ -43,5 +43,5 @@ type Attendance struct {
 	ClientID   uint
 	AttendedAt int `gorm:"autoCreateTime"`
 	Notes      *string
-	Services   []*Service `json:"-" gorm:"many2many:attendance_services;"`
+	Services   []*Service `gorm:"many2many:attendance_services;"`
 }

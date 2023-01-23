@@ -13,7 +13,7 @@ type Object interface {
 func listObject[T Object](c *gin.Context) {
 	var objects []T
 
-	if err := db.Find(&objects).Error; err != nil {
+	if err := db.Preload("Services").Find(&objects).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
 		c.JSON(http.StatusOK, objects)
@@ -25,7 +25,7 @@ func getObject[T Object](c *gin.Context) {
 
 	id := c.Params.ByName("id")
 
-	if err := db.First(&object, id).Error; err != nil {
+	if err := db.Preload("Services").First(&object, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
 		c.JSON(http.StatusOK, object)
