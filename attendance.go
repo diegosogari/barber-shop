@@ -46,11 +46,10 @@ func queryAttendance(c *gin.Context) {
 
 	if err := c.Bind(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": err})
-	} else if err = db.Find(&attendances, "attended_at BETWEEN ? AND ?"+
+	} else if err = db.Preload("Services").Find(&attendances, "attended_at BETWEEN ? AND ?"+
 		getIntArray("shop_id", json.ShopIDs)+
 		getIntArray("barber_id", json.BarberIDs)+
-		getIntArray("client_id", json.ClientIDs),
-		json.Begin, json.End).Error; err != nil {
+		getIntArray("client_id", json.ClientIDs), json.Begin, json.End).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": err})
 	} else {
 		c.JSON(http.StatusOK, attendances)
