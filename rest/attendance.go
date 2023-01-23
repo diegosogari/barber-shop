@@ -1,4 +1,4 @@
-package main
+package rest
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dsogari/barber-shop/graph/model"
+	"github.com/dsogari/barber-shop/orm"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,15 +21,15 @@ func addAttendanceService(c *gin.Context) {
 
 	id := c.Params.ByName("id")
 
-	if err := db.First(&attendance, id).Error; err != nil {
+	if err := orm.Db.First(&attendance, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else if err = c.Bind(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": err})
 	} else if len(json.ServiceIDs) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "at least one service ID must be provided"})
-	} else if err = db.Find(&services, json.ServiceIDs).Error; err != nil {
+	} else if err = orm.Db.Find(&services, json.ServiceIDs).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
-	} else if err = db.Model(&attendance).Association("Services").Append(&services); err != nil {
+	} else if err = orm.Db.Model(&attendance).Association("Services").Append(&services); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"status": err})
 	} else {
 		c.JSON(http.StatusOK, attendance)
@@ -47,7 +48,7 @@ func queryAttendance(c *gin.Context) {
 
 	if err := c.Bind(&json); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": err})
-	} else if err = db.Preload("Services").Find(&attendances, "attended_at BETWEEN ? AND ?"+
+	} else if err = orm.Db.Preload("Services").Find(&attendances, "attended_at BETWEEN ? AND ?"+
 		getIntArray("shop_id", json.ShopIDs)+
 		getIntArray("barber_id", json.BarberIDs)+
 		getIntArray("client_id", json.ClientIDs), json.Begin, json.End).Error; err != nil {
