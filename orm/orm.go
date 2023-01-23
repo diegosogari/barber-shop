@@ -1,7 +1,7 @@
 package orm
 
 import (
-	"github.com/dsogari/barber-shop/graph/model"
+	"github.com/dsogari/barber-shop/graph/generated"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -17,9 +17,9 @@ func SetupDatabase(filename string) {
 	}
 
 	// Migrate the schema
-	Db.AutoMigrate(&model.Shop{})
-	Db.AutoMigrate(&model.Barber{})
-	Db.AutoMigrate(&model.Service{})
-	Db.AutoMigrate(&model.Client{})
-	Db.AutoMigrate(&model.Attendance{})
+	Db.AutoMigrate(&generated.Shop{})
+	Db.AutoMigrate(&generated.Barber{})
+	Db.AutoMigrate(&generated.Service{})
+	Db.AutoMigrate(&generated.Client{})
+	Db.AutoMigrate(&generated.Attendance{})
 }

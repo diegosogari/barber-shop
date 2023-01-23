@@ -19,7 +19,7 @@ func main() {
 
 	orm.SetupDatabase(*dbFilename)
 	restServer := rest.SetupServer()
-	graphServer := graph.SetupServer()
+	/*graphServer := */ graph.SetupServer()
 
 	var wg sync.WaitGroup
 
@@ -35,7 +35,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Fatal(http.ListenAndServe(":"+*graphqlPort, graphServer))
+		log.Fatal(http.ListenAndServe(":"+*graphqlPort, nil))
 	}()
 
 	wg.Wait()

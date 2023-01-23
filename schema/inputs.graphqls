@@ -1,0 +1,39 @@
+input ShopInput {
+    address: String
+    phoneNumber: String
+    notes: String
+}
+
+input ServiceInput {
+    name: String
+    cost: Int
+    notes: String
+}
+
+input ClientInput {
+    name: String
+    phoneNumber: String
+    notes: String
+}
+
+input BarberInput {
+    name: String
+    phoneNumber: String
+    notes: String
+}
+
+input AttendanceInput {
+    shopID: Int
+    barberID: Int
+    clientID: Int
+    attendedAt: Int
+    notes: String
+}
+
+input AttendanceSearchInput {
+    shopIDs: [Int!]
+    barberIDs: [Int!]
+    clientIDs: [Int!]
+    begin: Int
+    end: Int
+}

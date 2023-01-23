@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/dsogari/barber-shop/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -35,6 +35,8 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Mutation() MutationResolver
+	Query() QueryResolver
 }
 
 type DirectiveRoot struct {
@@ -54,19 +56,6 @@ type ComplexityRoot struct {
 		UpdatedAt  func(childComplexity int) int
 	}
 
-	AttendanceMutation struct {
-		AddAttendanceServices func(childComplexity int, id int, serviceIDs []int) int
-		CreateAttendance      func(childComplexity int, input model.AttendanceInput) int
-		DeleteAttendance      func(childComplexity int, id int) int
-		UpdateAttendance      func(childComplexity int, id int, input model.AttendanceInput) int
-	}
-
-	AttendanceQuery struct {
-		GetAttendance    func(childComplexity int, id int) int
-		ListAttendance   func(childComplexity int) int
-		SearchAttendance func(childComplexity int, input model.AttendanceSearchInput) int
-	}
-
 	Barber struct {
 		CreatedAt   func(childComplexity int) int
 		DeletedAt   func(childComplexity int) int
@@ -75,17 +64,6 @@ type ComplexityRoot struct {
 		Notes       func(childComplexity int) int
 		PhoneNumber func(childComplexity int) int
 		UpdatedAt   func(childComplexity int) int
-	}
-
-	BarberMutation struct {
-		CreateBarber func(childComplexity int, input model.BarberInput) int
-		DeleteBarber func(childComplexity int, id int) int
-		UpdateBarber func(childComplexity int, id int, input model.BarberInput) int
-	}
-
-	BarberQuery struct {
-		GetBarber  func(childComplexity int, id int) int
-		ListBarber func(childComplexity int) int
 	}
 
 	Client struct {
@@ -98,18 +76,37 @@ type ComplexityRoot struct {
 		UpdatedAt   func(childComplexity int) int
 	}
 
-	ClientMutation struct {
-		CreateClient func(childComplexity int, input model.ClientInput) int
-		DeleteClient func(childComplexity int, id int) int
-		UpdateClient func(childComplexity int, id int, input model.ClientInput) int
-	}
-
-	ClientQuery struct {
-		GetClient  func(childComplexity int, id int) int
-		ListClient func(childComplexity int) int
+	Mutation struct {
+		AddAttendanceServices func(childComplexity int, id int, serviceIDs []int) int
+		CreateAttendance      func(childComplexity int, input AttendanceInput) int
+		CreateBarber          func(childComplexity int, input BarberInput) int
+		CreateClient          func(childComplexity int, input ClientInput) int
+		CreateService         func(childComplexity int, input ServiceInput) int
+		CreateShop            func(childComplexity int, input ShopInput) int
+		DeleteAttendance      func(childComplexity int, id int) int
+		DeleteBarber          func(childComplexity int, id int) int
+		DeleteClient          func(childComplexity int, id int) int
+		DeleteService         func(childComplexity int, id int) int
+		DeleteShop            func(childComplexity int, id int) int
+		UpdateAttendance      func(childComplexity int, id int, input AttendanceInput) int
+		UpdateBarber          func(childComplexity int, id int, input BarberInput) int
+		UpdateClient          func(childComplexity int, id int, input ClientInput) int
+		UpdateService         func(childComplexity int, id int, input ServiceInput) int
+		UpdateShop            func(childComplexity int, id int, input ShopInput) int
 	}
 
 	Query struct {
+		GetAttendance    func(childComplexity int, id int) int
+		GetBarber        func(childComplexity int, id int) int
+		GetClient        func(childComplexity int, id int) int
+		GetService       func(childComplexity int, id int) int
+		GetShop          func(childComplexity int, id int) int
+		ListAttendance   func(childComplexity int) int
+		ListBarber       func(childComplexity int) int
+		ListClient       func(childComplexity int) int
+		ListService      func(childComplexity int) int
+		ListShop         func(childComplexity int) int
+		SearchAttendance func(childComplexity int, input AttendanceSearchInput) int
 	}
 
 	Service struct {
@@ -122,17 +119,6 @@ type ComplexityRoot struct {
 		UpdatedAt func(childComplexity int) int
 	}
 
-	ServiceMutation struct {
-		CreateService func(childComplexity int, input model.ServiceInput) int
-		DeleteService func(childComplexity int, id int) int
-		UpdateService func(childComplexity int, id int, input model.ServiceInput) int
-	}
-
-	ServiceQuery struct {
-		GetService  func(childComplexity int, id int) int
-		ListService func(childComplexity int) int
-	}
-
 	Shop struct {
 		Address     func(childComplexity int) int
 		CreatedAt   func(childComplexity int) int
@@ -142,17 +128,38 @@ type ComplexityRoot struct {
 		PhoneNumber func(childComplexity int) int
 		UpdatedAt   func(childComplexity int) int
 	}
+}
 
-	ShopMutation struct {
-		CreateShop func(childComplexity int, input model.ShopInput) int
-		DeleteShop func(childComplexity int, id int) int
-		UpdateShop func(childComplexity int, id int, input model.ShopInput) int
-	}
-
-	ShopQuery struct {
-		GetShop  func(childComplexity int, id int) int
-		ListShop func(childComplexity int) int
-	}
+type MutationResolver interface {
+	CreateShop(ctx context.Context, input ShopInput) (*Shop, error)
+	UpdateShop(ctx context.Context, id int, input ShopInput) (*Shop, error)
+	DeleteShop(ctx context.Context, id int) (*Shop, error)
+	CreateService(ctx context.Context, input ServiceInput) (*Service, error)
+	UpdateService(ctx context.Context, id int, input ServiceInput) (*Service, error)
+	DeleteService(ctx context.Context, id int) (*Service, error)
+	CreateClient(ctx context.Context, input ClientInput) (*Client, error)
+	UpdateClient(ctx context.Context, id int, input ClientInput) (*Client, error)
+	DeleteClient(ctx context.Context, id int) (*Client, error)
+	CreateBarber(ctx context.Context, input BarberInput) (*Barber, error)
+	UpdateBarber(ctx context.Context, id int, input BarberInput) (*Barber, error)
+	DeleteBarber(ctx context.Context, id int) (*Barber, error)
+	CreateAttendance(ctx context.Context, input AttendanceInput) (*Attendance, error)
+	UpdateAttendance(ctx context.Context, id int, input AttendanceInput) (*Attendance, error)
+	DeleteAttendance(ctx context.Context, id int) (*Attendance, error)
+	AddAttendanceServices(ctx context.Context, id int, serviceIDs []int) (*Attendance, error)
+}
+type QueryResolver interface {
+	ListShop(ctx context.Context) ([]*Shop, error)
+	GetShop(ctx context.Context, id int) (*Shop, error)
+	ListService(ctx context.Context) ([]*Service, error)
+	GetService(ctx context.Context, id int) (*Service, error)
+	ListClient(ctx context.Context) ([]*Client, error)
+	GetClient(ctx context.Context, id int) (*Client, error)
+	ListBarber(ctx context.Context) ([]*Barber, error)
+	GetBarber(ctx context.Context, id int) (*Barber, error)
+	ListAttendance(ctx context.Context) ([]*Attendance, error)
+	GetAttendance(ctx context.Context, id int) (*Attendance, error)
+	SearchAttendance(ctx context.Context, input AttendanceSearchInput) ([]*Attendance, error)
 }
 
 type executableSchema struct {
@@ -240,85 +247,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Attendance.UpdatedAt(childComplexity), true
 
-	case "AttendanceMutation.addAttendanceServices":
-		if e.complexity.AttendanceMutation.AddAttendanceServices == nil {
-			break
-		}
-
-		args, err := ec.field_AttendanceMutation_addAttendanceServices_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.AttendanceMutation.AddAttendanceServices(childComplexity, args["id"].(int), args["serviceIDs"].([]int)), true
-
-	case "AttendanceMutation.createAttendance":
-		if e.complexity.AttendanceMutation.CreateAttendance == nil {
-			break
-		}
-
-		args, err := ec.field_AttendanceMutation_createAttendance_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.AttendanceMutation.CreateAttendance(childComplexity, args["input"].(model.AttendanceInput)), true
-
-	case "AttendanceMutation.deleteAttendance":
-		if e.complexity.AttendanceMutation.DeleteAttendance == nil {
-			break
-		}
-
-		args, err := ec.field_AttendanceMutation_deleteAttendance_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.AttendanceMutation.DeleteAttendance(childComplexity, args["id"].(int)), true
-
-	case "AttendanceMutation.updateAttendance":
-		if e.complexity.AttendanceMutation.UpdateAttendance == nil {
-			break
-		}
-
-		args, err := ec.field_AttendanceMutation_updateAttendance_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.AttendanceMutation.UpdateAttendance(childComplexity, args["id"].(int), args["input"].(model.AttendanceInput)), true
-
-	case "AttendanceQuery.getAttendance":
-		if e.complexity.AttendanceQuery.GetAttendance == nil {
-			break
-		}
-
-		args, err := ec.field_AttendanceQuery_getAttendance_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.AttendanceQuery.GetAttendance(childComplexity, args["id"].(int)), true
-
-	case "AttendanceQuery.listAttendance":
-		if e.complexity.AttendanceQuery.ListAttendance == nil {
-			break
-		}
-
-		return e.complexity.AttendanceQuery.ListAttendance(childComplexity), true
-
-	case "AttendanceQuery.searchAttendance":
-		if e.complexity.AttendanceQuery.SearchAttendance == nil {
-			break
-		}
-
-		args, err := ec.field_AttendanceQuery_searchAttendance_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.AttendanceQuery.SearchAttendance(childComplexity, args["input"].(model.AttendanceSearchInput)), true
-
 	case "Barber.createdAt":
 		if e.complexity.Barber.CreatedAt == nil {
 			break
@@ -367,61 +295,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Barber.UpdatedAt(childComplexity), true
-
-	case "BarberMutation.createBarber":
-		if e.complexity.BarberMutation.CreateBarber == nil {
-			break
-		}
-
-		args, err := ec.field_BarberMutation_createBarber_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.BarberMutation.CreateBarber(childComplexity, args["input"].(model.BarberInput)), true
-
-	case "BarberMutation.deleteBarber":
-		if e.complexity.BarberMutation.DeleteBarber == nil {
-			break
-		}
-
-		args, err := ec.field_BarberMutation_deleteBarber_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.BarberMutation.DeleteBarber(childComplexity, args["id"].(int)), true
-
-	case "BarberMutation.updateBarber":
-		if e.complexity.BarberMutation.UpdateBarber == nil {
-			break
-		}
-
-		args, err := ec.field_BarberMutation_updateBarber_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.BarberMutation.UpdateBarber(childComplexity, args["id"].(int), args["input"].(model.BarberInput)), true
-
-	case "BarberQuery.getBarber":
-		if e.complexity.BarberQuery.GetBarber == nil {
-			break
-		}
-
-		args, err := ec.field_BarberQuery_getBarber_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.BarberQuery.GetBarber(childComplexity, args["id"].(int)), true
-
-	case "BarberQuery.listBarber":
-		if e.complexity.BarberQuery.ListBarber == nil {
-			break
-		}
-
-		return e.complexity.BarberQuery.ListBarber(childComplexity), true
 
 	case "Client.createdAt":
 		if e.complexity.Client.CreatedAt == nil {
@@ -472,60 +345,304 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Client.UpdatedAt(childComplexity), true
 
-	case "ClientMutation.createClient":
-		if e.complexity.ClientMutation.CreateClient == nil {
+	case "Mutation.addAttendanceServices":
+		if e.complexity.Mutation.AddAttendanceServices == nil {
 			break
 		}
 
-		args, err := ec.field_ClientMutation_createClient_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_addAttendanceServices_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.ClientMutation.CreateClient(childComplexity, args["input"].(model.ClientInput)), true
+		return e.complexity.Mutation.AddAttendanceServices(childComplexity, args["id"].(int), args["serviceIDs"].([]int)), true
 
-	case "ClientMutation.deleteClient":
-		if e.complexity.ClientMutation.DeleteClient == nil {
+	case "Mutation.createAttendance":
+		if e.complexity.Mutation.CreateAttendance == nil {
 			break
 		}
 
-		args, err := ec.field_ClientMutation_deleteClient_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_createAttendance_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.ClientMutation.DeleteClient(childComplexity, args["id"].(int)), true
+		return e.complexity.Mutation.CreateAttendance(childComplexity, args["input"].(AttendanceInput)), true
 
-	case "ClientMutation.updateClient":
-		if e.complexity.ClientMutation.UpdateClient == nil {
+	case "Mutation.createBarber":
+		if e.complexity.Mutation.CreateBarber == nil {
 			break
 		}
 
-		args, err := ec.field_ClientMutation_updateClient_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_createBarber_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.ClientMutation.UpdateClient(childComplexity, args["id"].(int), args["input"].(model.ClientInput)), true
+		return e.complexity.Mutation.CreateBarber(childComplexity, args["input"].(BarberInput)), true
 
-	case "ClientQuery.getClient":
-		if e.complexity.ClientQuery.GetClient == nil {
+	case "Mutation.createClient":
+		if e.complexity.Mutation.CreateClient == nil {
 			break
 		}
 
-		args, err := ec.field_ClientQuery_getClient_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_createClient_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.ClientQuery.GetClient(childComplexity, args["id"].(int)), true
+		return e.complexity.Mutation.CreateClient(childComplexity, args["input"].(ClientInput)), true
 
-	case "ClientQuery.listClient":
-		if e.complexity.ClientQuery.ListClient == nil {
+	case "Mutation.createService":
+		if e.complexity.Mutation.CreateService == nil {
 			break
 		}
 
-		return e.complexity.ClientQuery.ListClient(childComplexity), true
+		args, err := ec.field_Mutation_createService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateService(childComplexity, args["input"].(ServiceInput)), true
+
+	case "Mutation.createShop":
+		if e.complexity.Mutation.CreateShop == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createShop_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateShop(childComplexity, args["input"].(ShopInput)), true
+
+	case "Mutation.deleteAttendance":
+		if e.complexity.Mutation.DeleteAttendance == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteAttendance_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteAttendance(childComplexity, args["id"].(int)), true
+
+	case "Mutation.deleteBarber":
+		if e.complexity.Mutation.DeleteBarber == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteBarber_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteBarber(childComplexity, args["id"].(int)), true
+
+	case "Mutation.deleteClient":
+		if e.complexity.Mutation.DeleteClient == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteClient_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteClient(childComplexity, args["id"].(int)), true
+
+	case "Mutation.deleteService":
+		if e.complexity.Mutation.DeleteService == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteService(childComplexity, args["id"].(int)), true
+
+	case "Mutation.deleteShop":
+		if e.complexity.Mutation.DeleteShop == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteShop_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteShop(childComplexity, args["id"].(int)), true
+
+	case "Mutation.updateAttendance":
+		if e.complexity.Mutation.UpdateAttendance == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateAttendance_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateAttendance(childComplexity, args["id"].(int), args["input"].(AttendanceInput)), true
+
+	case "Mutation.updateBarber":
+		if e.complexity.Mutation.UpdateBarber == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateBarber_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateBarber(childComplexity, args["id"].(int), args["input"].(BarberInput)), true
+
+	case "Mutation.updateClient":
+		if e.complexity.Mutation.UpdateClient == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateClient_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateClient(childComplexity, args["id"].(int), args["input"].(ClientInput)), true
+
+	case "Mutation.updateService":
+		if e.complexity.Mutation.UpdateService == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateService(childComplexity, args["id"].(int), args["input"].(ServiceInput)), true
+
+	case "Mutation.updateShop":
+		if e.complexity.Mutation.UpdateShop == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateShop_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateShop(childComplexity, args["id"].(int), args["input"].(ShopInput)), true
+
+	case "Query.getAttendance":
+		if e.complexity.Query.GetAttendance == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getAttendance_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetAttendance(childComplexity, args["id"].(int)), true
+
+	case "Query.getBarber":
+		if e.complexity.Query.GetBarber == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getBarber_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetBarber(childComplexity, args["id"].(int)), true
+
+	case "Query.getClient":
+		if e.complexity.Query.GetClient == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getClient_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetClient(childComplexity, args["id"].(int)), true
+
+	case "Query.getService":
+		if e.complexity.Query.GetService == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetService(childComplexity, args["id"].(int)), true
+
+	case "Query.getShop":
+		if e.complexity.Query.GetShop == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getShop_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetShop(childComplexity, args["id"].(int)), true
+
+	case "Query.listAttendance":
+		if e.complexity.Query.ListAttendance == nil {
+			break
+		}
+
+		return e.complexity.Query.ListAttendance(childComplexity), true
+
+	case "Query.listBarber":
+		if e.complexity.Query.ListBarber == nil {
+			break
+		}
+
+		return e.complexity.Query.ListBarber(childComplexity), true
+
+	case "Query.listClient":
+		if e.complexity.Query.ListClient == nil {
+			break
+		}
+
+		return e.complexity.Query.ListClient(childComplexity), true
+
+	case "Query.listService":
+		if e.complexity.Query.ListService == nil {
+			break
+		}
+
+		return e.complexity.Query.ListService(childComplexity), true
+
+	case "Query.listShop":
+		if e.complexity.Query.ListShop == nil {
+			break
+		}
+
+		return e.complexity.Query.ListShop(childComplexity), true
+
+	case "Query.searchAttendance":
+		if e.complexity.Query.SearchAttendance == nil {
+			break
+		}
+
+		args, err := ec.field_Query_searchAttendance_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.SearchAttendance(childComplexity, args["input"].(AttendanceSearchInput)), true
 
 	case "Service.cost":
 		if e.complexity.Service.Cost == nil {
@@ -576,61 +693,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Service.UpdatedAt(childComplexity), true
 
-	case "ServiceMutation.createService":
-		if e.complexity.ServiceMutation.CreateService == nil {
-			break
-		}
-
-		args, err := ec.field_ServiceMutation_createService_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ServiceMutation.CreateService(childComplexity, args["input"].(model.ServiceInput)), true
-
-	case "ServiceMutation.deleteService":
-		if e.complexity.ServiceMutation.DeleteService == nil {
-			break
-		}
-
-		args, err := ec.field_ServiceMutation_deleteService_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ServiceMutation.DeleteService(childComplexity, args["id"].(int)), true
-
-	case "ServiceMutation.updateService":
-		if e.complexity.ServiceMutation.UpdateService == nil {
-			break
-		}
-
-		args, err := ec.field_ServiceMutation_updateService_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ServiceMutation.UpdateService(childComplexity, args["id"].(int), args["input"].(model.ServiceInput)), true
-
-	case "ServiceQuery.getService":
-		if e.complexity.ServiceQuery.GetService == nil {
-			break
-		}
-
-		args, err := ec.field_ServiceQuery_getService_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ServiceQuery.GetService(childComplexity, args["id"].(int)), true
-
-	case "ServiceQuery.listService":
-		if e.complexity.ServiceQuery.ListService == nil {
-			break
-		}
-
-		return e.complexity.ServiceQuery.ListService(childComplexity), true
-
 	case "Shop.address":
 		if e.complexity.Shop.Address == nil {
 			break
@@ -680,61 +742,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Shop.UpdatedAt(childComplexity), true
 
-	case "ShopMutation.createShop":
-		if e.complexity.ShopMutation.CreateShop == nil {
-			break
-		}
-
-		args, err := ec.field_ShopMutation_createShop_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ShopMutation.CreateShop(childComplexity, args["input"].(model.ShopInput)), true
-
-	case "ShopMutation.deleteShop":
-		if e.complexity.ShopMutation.DeleteShop == nil {
-			break
-		}
-
-		args, err := ec.field_ShopMutation_deleteShop_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ShopMutation.DeleteShop(childComplexity, args["id"].(int)), true
-
-	case "ShopMutation.updateShop":
-		if e.complexity.ShopMutation.UpdateShop == nil {
-			break
-		}
-
-		args, err := ec.field_ShopMutation_updateShop_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ShopMutation.UpdateShop(childComplexity, args["id"].(int), args["input"].(model.ShopInput)), true
-
-	case "ShopQuery.getShop":
-		if e.complexity.ShopQuery.GetShop == nil {
-			break
-		}
-
-		args, err := ec.field_ShopQuery_getShop_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.ShopQuery.GetShop(childComplexity, args["id"].(int)), true
-
-	case "ShopQuery.listShop":
-		if e.complexity.ShopQuery.ListShop == nil {
-			break
-		}
-
-		return e.complexity.ShopQuery.ListShop(childComplexity), true
-
 	}
 	return 0, false
 }
@@ -768,6 +775,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				Data: buf.Bytes(),
 			}
 		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
 
 	default:
 		return graphql.OneShot(graphql.ErrorResponse(ctx, "unsupported GraphQL operation"))
@@ -794,17 +816,28 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema/attendance.graphqls", Input: `type Attendance {
-    id: Int!
-    createdAt: Int!
-    updatedAt: Int!
-    deletedAt: Int
-    shop: Shop!
-    barber: Barber!
-    client: Client!
-    attendedAt: Int!
+	{Name: "../../schema/inputs.graphqls", Input: `input ShopInput {
+    address: String
+    phoneNumber: String
     notes: String
-    services: [Service!]
+}
+
+input ServiceInput {
+    name: String
+    cost: Int
+    notes: String
+}
+
+input ClientInput {
+    name: String
+    phoneNumber: String
+    notes: String
+}
+
+input BarberInput {
+    name: String
+    phoneNumber: String
+    notes: String
 }
 
 input AttendanceInput {
@@ -822,102 +855,49 @@ input AttendanceSearchInput {
     begin: Int
     end: Int
 }
-
-type AttendanceQuery {
-  listAttendance: [Attendance!]!
-  getAttendance(id: Int!): Attendance!
-  searchAttendance(input: AttendanceSearchInput!): [Attendance!]!
-}
-
-type AttendanceMutation {
+`, BuiltIn: false},
+	{Name: "../../schema/mutation.graphqls", Input: `type Mutation {
+  createShop(input: ShopInput!): Shop!
+  updateShop(id: Int!, input: ShopInput!): Shop!
+  deleteShop(id: Int!): Shop!
+  
+  createService(input: ServiceInput!): Service!
+  updateService(id: Int!, input: ServiceInput!): Service!
+  deleteService(id: Int!): Service!
+  
+  createClient(input: ClientInput!): Client!
+  updateClient(id: Int!, input: ClientInput!): Client!
+  deleteClient(id: Int!): Client!
+  
+  createBarber(input: BarberInput!): Barber!
+  updateBarber(id: Int!, input: BarberInput!): Barber!
+  deleteBarber(id: Int!): Barber!
+  
   createAttendance(input: AttendanceInput!): Attendance!
   updateAttendance(id: Int!, input: AttendanceInput!): Attendance!
   deleteAttendance(id: Int!): Attendance!
   addAttendanceServices(id: Int!, serviceIDs: [Int!]!): Attendance!
 }
 `, BuiltIn: false},
-	{Name: "../schema/barber.graphqls", Input: `type Barber {
-    id: Int!
-    createdAt: Int!
-    updatedAt: Int!
-    deletedAt: Int
-    name: String!
-    phoneNumber: String
-    notes: String
-}
-
-input BarberInput {
-    name: String
-    phoneNumber: String
-    notes: String
-}
-
-type BarberQuery {
-  listBarber: [Barber!]!
-  getBarber(id: Int!): Barber!
-}
-
-type BarberMutation {
-  createBarber(input: BarberInput!): Barber!
-  updateBarber(id: Int!, input: BarberInput!): Barber!
-  deleteBarber(id: Int!): Barber!
-}
-`, BuiltIn: false},
-	{Name: "../schema/client.graphqls", Input: `type Client {
-    id: Int!
-    createdAt: Int!
-    updatedAt: Int!
-    deletedAt: Int
-    name: String!
-    phoneNumber: String
-    notes: String
-}
-
-input ClientInput {
-    name: String
-    phoneNumber: String
-    notes: String
-}
-
-type ClientQuery {
-  listClient: [Client!]!
-  getClient(id: Int!): Client!
-}
-
-type ClientMutation {
-  createClient(input: ClientInput!): Client!
-  updateClient(id: Int!, input: ClientInput!): Client!
-  deleteClient(id: Int!): Client!
-}
-`, BuiltIn: false},
-	{Name: "../schema/service.graphqls", Input: `type Service {
-    id: Int!
-    createdAt: Int!
-    updatedAt: Int!
-    deletedAt: Int
-    name: String!
-    cost: Int!
-    notes: String
-}
-
-input ServiceInput {
-    name: String
-    cost: Int
-    notes: String
-}
-
-type ServiceQuery {
+	{Name: "../../schema/query.graphqls", Input: `type Query {
+  listShop: [Shop!]!
+  getShop(id: Int!): Shop!
+  
   listService: [Service!]!
   getService(id: Int!): Service!
-}
-
-type ServiceMutation {
-  createService(input: ServiceInput!): Service!
-  updateService(id: Int!, input: ServiceInput!): Service!
-  deleteService(id: Int!): Service!
+  
+  listClient: [Client!]!
+  getClient(id: Int!): Client!
+  
+  listBarber: [Barber!]!
+  getBarber(id: Int!): Barber!
+  
+  listAttendance: [Attendance!]!
+  getAttendance(id: Int!): Attendance!
+  searchAttendance(input: AttendanceSearchInput!): [Attendance!]!
 }
 `, BuiltIn: false},
-	{Name: "../schema/shop.graphqls", Input: `type Shop {
+	{Name: "../../schema/types.graphqls", Input: `type Shop {
     id: Int!
     createdAt: Int!
     updatedAt: Int!
@@ -927,21 +907,47 @@ type ServiceMutation {
     notes: String
 }
 
-input ShopInput {
-    address: String
+type Service {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
+    cost: Int!
+    notes: String
+}
+
+type Client {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
     phoneNumber: String
     notes: String
 }
 
-type ShopQuery {
-  listShop: [Shop!]!
-  getShop(id: Int!): Shop!
+type Barber {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
+    phoneNumber: String
+    notes: String
 }
 
-type ShopMutation {
-  createShop(input: ShopInput!): Shop!
-  updateShop(id: Int!, input: ShopInput!): Shop!
-  deleteShop(id: Int!): Shop!
+type Attendance {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    shop: Shop!
+    barber: Barber!
+    client: Client!
+    attendedAt: Int!
+    notes: String
+    services: [Service!]
 }
 `, BuiltIn: false},
 }
@@ -951,7 +957,7 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_AttendanceMutation_addAttendanceServices_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_addAttendanceServices_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -975,13 +981,13 @@ func (ec *executionContext) field_AttendanceMutation_addAttendanceServices_args(
 	return args, nil
 }
 
-func (ec *executionContext) field_AttendanceMutation_createAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_createAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.AttendanceInput
+	var arg0 AttendanceInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAttendanceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceInput(ctx, tmp)
+		arg0, err = ec.unmarshalNAttendanceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -990,7 +996,67 @@ func (ec *executionContext) field_AttendanceMutation_createAttendance_args(ctx c
 	return args, nil
 }
 
-func (ec *executionContext) field_AttendanceMutation_deleteAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_createBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 BarberInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNBarberInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarberInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 ClientInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNClientInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClientInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 ServiceInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNServiceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 ShopInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNShopInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShopInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1005,7 +1071,7 @@ func (ec *executionContext) field_AttendanceMutation_deleteAttendance_args(ctx c
 	return args, nil
 }
 
-func (ec *executionContext) field_AttendanceMutation_updateAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_deleteBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1017,10 +1083,70 @@ func (ec *executionContext) field_AttendanceMutation_updateAttendance_args(ctx c
 		}
 	}
 	args["id"] = arg0
-	var arg1 model.AttendanceInput
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 AttendanceInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg1, err = ec.unmarshalNAttendanceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceInput(ctx, tmp)
+		arg1, err = ec.unmarshalNAttendanceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1029,7 +1155,7 @@ func (ec *executionContext) field_AttendanceMutation_updateAttendance_args(ctx c
 	return args, nil
 }
 
-func (ec *executionContext) field_AttendanceQuery_getAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_updateBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1041,70 +1167,10 @@ func (ec *executionContext) field_AttendanceQuery_getAttendance_args(ctx context
 		}
 	}
 	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_AttendanceQuery_searchAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.AttendanceSearchInput
+	var arg1 BarberInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNAttendanceSearchInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceSearchInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_BarberMutation_createBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.BarberInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNBarberInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarberInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_BarberMutation_deleteBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_BarberMutation_updateBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	var arg1 model.BarberInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg1, err = ec.unmarshalNBarberInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarberInput(ctx, tmp)
+		arg1, err = ec.unmarshalNBarberInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarberInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1113,7 +1179,7 @@ func (ec *executionContext) field_BarberMutation_updateBarber_args(ctx context.C
 	return args, nil
 }
 
-func (ec *executionContext) field_BarberQuery_getBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_updateClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1125,55 +1191,10 @@ func (ec *executionContext) field_BarberQuery_getBarber_args(ctx context.Context
 		}
 	}
 	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ClientMutation_createClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.ClientInput
+	var arg1 ClientInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNClientInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClientInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ClientMutation_deleteClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ClientMutation_updateClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	var arg1 model.ClientInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg1, err = ec.unmarshalNClientInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClientInput(ctx, tmp)
+		arg1, err = ec.unmarshalNClientInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClientInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1182,7 +1203,7 @@ func (ec *executionContext) field_ClientMutation_updateClient_args(ctx context.C
 	return args, nil
 }
 
-func (ec *executionContext) field_ClientQuery_getClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_updateService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1194,6 +1215,39 @@ func (ec *executionContext) field_ClientQuery_getClient_args(ctx context.Context
 		}
 	}
 	args["id"] = arg0
+	var arg1 ServiceInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg1, err = ec.unmarshalNServiceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 ShopInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg1, err = ec.unmarshalNShopInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShopInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -1212,141 +1266,93 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_ServiceMutation_createService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_getAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.ServiceInput
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getBarber_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getClient_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_searchAttendance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 AttendanceSearchInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNServiceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceInput(ctx, tmp)
+		arg0, err = ec.unmarshalNAttendanceSearchInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceSearchInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ServiceMutation_deleteService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ServiceMutation_updateService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	var arg1 model.ServiceInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg1, err = ec.unmarshalNServiceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_ServiceQuery_getService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ShopMutation_createShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.ShopInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNShopInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShopInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ShopMutation_deleteShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_ShopMutation_updateShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	var arg1 model.ShopInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg1, err = ec.unmarshalNShopInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShopInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_ShopQuery_getShop_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
 	return args, nil
 }
 
@@ -1388,7 +1394,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Attendance_id(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_id(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1432,7 +1438,7 @@ func (ec *executionContext) fieldContext_Attendance_id(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_createdAt(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1476,7 +1482,7 @@ func (ec *executionContext) fieldContext_Attendance_createdAt(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_updatedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1520,7 +1526,7 @@ func (ec *executionContext) fieldContext_Attendance_updatedAt(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_deletedAt(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_deletedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1561,7 +1567,7 @@ func (ec *executionContext) fieldContext_Attendance_deletedAt(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_shop(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_shop(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_shop(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1587,9 +1593,9 @@ func (ec *executionContext) _Attendance_shop(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Shop)
+	res := resTmp.(*Shop)
 	fc.Result = res
-	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx, field.Selections, res)
+	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Attendance_shop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1621,7 +1627,7 @@ func (ec *executionContext) fieldContext_Attendance_shop(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_barber(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_barber(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_barber(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1647,9 +1653,9 @@ func (ec *executionContext) _Attendance_barber(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Barber)
+	res := resTmp.(*Barber)
 	fc.Result = res
-	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx, field.Selections, res)
+	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Attendance_barber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1681,7 +1687,7 @@ func (ec *executionContext) fieldContext_Attendance_barber(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_client(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_client(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_client(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1707,9 +1713,9 @@ func (ec *executionContext) _Attendance_client(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Client)
+	res := resTmp.(*Client)
 	fc.Result = res
-	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx, field.Selections, res)
+	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Attendance_client(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1741,7 +1747,7 @@ func (ec *executionContext) fieldContext_Attendance_client(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_attendedAt(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_attendedAt(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_attendedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1785,7 +1791,7 @@ func (ec *executionContext) fieldContext_Attendance_attendedAt(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_notes(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_notes(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_notes(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1826,7 +1832,7 @@ func (ec *executionContext) fieldContext_Attendance_notes(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Attendance_services(ctx context.Context, field graphql.CollectedField, obj *model.Attendance) (ret graphql.Marshaler) {
+func (ec *executionContext) _Attendance_services(ctx context.Context, field graphql.CollectedField, obj *Attendance) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Attendance_services(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1849,9 +1855,9 @@ func (ec *executionContext) _Attendance_services(ctx context.Context, field grap
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Service)
+	res := resTmp.([]*Service)
 	fc.Result = res
-	return ec.marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceᚄ(ctx, field.Selections, res)
+	return ec.marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Attendance_services(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1883,535 +1889,7 @@ func (ec *executionContext) fieldContext_Attendance_services(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _AttendanceMutation_createAttendance(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceMutation_createAttendance(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CreateAttendance, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceMutation_createAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_AttendanceMutation_createAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AttendanceMutation_updateAttendance(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceMutation_updateAttendance(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateAttendance, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceMutation_updateAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_AttendanceMutation_updateAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AttendanceMutation_deleteAttendance(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceMutation_deleteAttendance(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.DeleteAttendance, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceMutation_deleteAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_AttendanceMutation_deleteAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AttendanceMutation_addAttendanceServices(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceMutation_addAttendanceServices(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.AddAttendanceServices, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceMutation_addAttendanceServices(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_AttendanceMutation_addAttendanceServices_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AttendanceQuery_listAttendance(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceQuery_listAttendance(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ListAttendance, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceQuery_listAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AttendanceQuery_getAttendance(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceQuery_getAttendance(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.GetAttendance, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceQuery_getAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_AttendanceQuery_getAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AttendanceQuery_searchAttendance(ctx context.Context, field graphql.CollectedField, obj *model.AttendanceQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_AttendanceQuery_searchAttendance(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.SearchAttendance, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Attendance)
-	fc.Result = res
-	return ec.marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_AttendanceQuery_searchAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AttendanceQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Attendance_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Attendance_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Attendance_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Attendance_deletedAt(ctx, field)
-			case "shop":
-				return ec.fieldContext_Attendance_shop(ctx, field)
-			case "barber":
-				return ec.fieldContext_Attendance_barber(ctx, field)
-			case "client":
-				return ec.fieldContext_Attendance_client(ctx, field)
-			case "attendedAt":
-				return ec.fieldContext_Attendance_attendedAt(ctx, field)
-			case "notes":
-				return ec.fieldContext_Attendance_notes(ctx, field)
-			case "services":
-				return ec.fieldContext_Attendance_services(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_AttendanceQuery_searchAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Barber_id(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_id(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2455,7 +1933,7 @@ func (ec *executionContext) fieldContext_Barber_id(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Barber_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_createdAt(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2499,7 +1977,7 @@ func (ec *executionContext) fieldContext_Barber_createdAt(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Barber_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_updatedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2543,7 +2021,7 @@ func (ec *executionContext) fieldContext_Barber_updatedAt(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Barber_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_deletedAt(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_deletedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2584,7 +2062,7 @@ func (ec *executionContext) fieldContext_Barber_deletedAt(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Barber_name(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_name(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2628,7 +2106,7 @@ func (ec *executionContext) fieldContext_Barber_name(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _Barber_phoneNumber(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_phoneNumber(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_phoneNumber(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2669,7 +2147,7 @@ func (ec *executionContext) fieldContext_Barber_phoneNumber(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Barber_notes(ctx context.Context, field graphql.CollectedField, obj *model.Barber) (ret graphql.Marshaler) {
+func (ec *executionContext) _Barber_notes(ctx context.Context, field graphql.CollectedField, obj *Barber) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Barber_notes(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2710,351 +2188,7 @@ func (ec *executionContext) fieldContext_Barber_notes(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _BarberMutation_createBarber(ctx context.Context, field graphql.CollectedField, obj *model.BarberMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_BarberMutation_createBarber(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CreateBarber, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Barber)
-	fc.Result = res
-	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_BarberMutation_createBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BarberMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Barber_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Barber_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Barber_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Barber_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Barber_name(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Barber_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Barber_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_BarberMutation_createBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BarberMutation_updateBarber(ctx context.Context, field graphql.CollectedField, obj *model.BarberMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_BarberMutation_updateBarber(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateBarber, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Barber)
-	fc.Result = res
-	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_BarberMutation_updateBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BarberMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Barber_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Barber_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Barber_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Barber_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Barber_name(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Barber_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Barber_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_BarberMutation_updateBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BarberMutation_deleteBarber(ctx context.Context, field graphql.CollectedField, obj *model.BarberMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_BarberMutation_deleteBarber(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.DeleteBarber, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Barber)
-	fc.Result = res
-	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_BarberMutation_deleteBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BarberMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Barber_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Barber_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Barber_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Barber_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Barber_name(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Barber_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Barber_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_BarberMutation_deleteBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BarberQuery_listBarber(ctx context.Context, field graphql.CollectedField, obj *model.BarberQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_BarberQuery_listBarber(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ListBarber, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Barber)
-	fc.Result = res
-	return ec.marshalNBarber2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarberᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_BarberQuery_listBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BarberQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Barber_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Barber_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Barber_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Barber_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Barber_name(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Barber_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Barber_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BarberQuery_getBarber(ctx context.Context, field graphql.CollectedField, obj *model.BarberQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_BarberQuery_getBarber(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.GetBarber, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Barber)
-	fc.Result = res
-	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_BarberQuery_getBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BarberQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Barber_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Barber_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Barber_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Barber_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Barber_name(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Barber_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Barber_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_BarberQuery_getBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Client_id(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_id(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3098,7 +2232,7 @@ func (ec *executionContext) fieldContext_Client_id(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Client_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_createdAt(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3142,7 +2276,7 @@ func (ec *executionContext) fieldContext_Client_createdAt(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Client_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_updatedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3186,7 +2320,7 @@ func (ec *executionContext) fieldContext_Client_updatedAt(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Client_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_deletedAt(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_deletedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3227,7 +2361,7 @@ func (ec *executionContext) fieldContext_Client_deletedAt(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Client_name(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_name(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3271,7 +2405,7 @@ func (ec *executionContext) fieldContext_Client_name(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _Client_phoneNumber(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_phoneNumber(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_phoneNumber(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3312,7 +2446,7 @@ func (ec *executionContext) fieldContext_Client_phoneNumber(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Client_notes(ctx context.Context, field graphql.CollectedField, obj *model.Client) (ret graphql.Marshaler) {
+func (ec *executionContext) _Client_notes(ctx context.Context, field graphql.CollectedField, obj *Client) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Client_notes(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3353,8 +2487,8 @@ func (ec *executionContext) fieldContext_Client_notes(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _ClientMutation_createClient(ctx context.Context, field graphql.CollectedField, obj *model.ClientMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ClientMutation_createClient(ctx, field)
+func (ec *executionContext) _Mutation_createShop(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createShop(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3367,7 +2501,7 @@ func (ec *executionContext) _ClientMutation_createClient(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CreateClient, nil
+		return ec.resolvers.Mutation().CreateShop(rctx, fc.Args["input"].(ShopInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3379,35 +2513,35 @@ func (ec *executionContext) _ClientMutation_createClient(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Client)
+	res := resTmp.(*Shop)
 	fc.Result = res
-	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx, field.Selections, res)
+	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ClientMutation_createClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "ClientMutation",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Client_id(ctx, field)
+				return ec.fieldContext_Shop_id(ctx, field)
 			case "createdAt":
-				return ec.fieldContext_Client_createdAt(ctx, field)
+				return ec.fieldContext_Shop_createdAt(ctx, field)
 			case "updatedAt":
-				return ec.fieldContext_Client_updatedAt(ctx, field)
+				return ec.fieldContext_Shop_updatedAt(ctx, field)
 			case "deletedAt":
-				return ec.fieldContext_Client_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Client_name(ctx, field)
+				return ec.fieldContext_Shop_deletedAt(ctx, field)
+			case "address":
+				return ec.fieldContext_Shop_address(ctx, field)
 			case "phoneNumber":
-				return ec.fieldContext_Client_phoneNumber(ctx, field)
+				return ec.fieldContext_Shop_phoneNumber(ctx, field)
 			case "notes":
-				return ec.fieldContext_Client_notes(ctx, field)
+				return ec.fieldContext_Shop_notes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
 		},
 	}
 	defer func() {
@@ -3417,15 +2551,15 @@ func (ec *executionContext) fieldContext_ClientMutation_createClient(ctx context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ClientMutation_createClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _ClientMutation_updateClient(ctx context.Context, field graphql.CollectedField, obj *model.ClientMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ClientMutation_updateClient(ctx, field)
+func (ec *executionContext) _Mutation_updateShop(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateShop(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3438,7 +2572,7 @@ func (ec *executionContext) _ClientMutation_updateClient(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateClient, nil
+		return ec.resolvers.Mutation().UpdateShop(rctx, fc.Args["id"].(int), fc.Args["input"].(ShopInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3450,35 +2584,35 @@ func (ec *executionContext) _ClientMutation_updateClient(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Client)
+	res := resTmp.(*Shop)
 	fc.Result = res
-	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx, field.Selections, res)
+	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ClientMutation_updateClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_updateShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "ClientMutation",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Client_id(ctx, field)
+				return ec.fieldContext_Shop_id(ctx, field)
 			case "createdAt":
-				return ec.fieldContext_Client_createdAt(ctx, field)
+				return ec.fieldContext_Shop_createdAt(ctx, field)
 			case "updatedAt":
-				return ec.fieldContext_Client_updatedAt(ctx, field)
+				return ec.fieldContext_Shop_updatedAt(ctx, field)
 			case "deletedAt":
-				return ec.fieldContext_Client_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Client_name(ctx, field)
+				return ec.fieldContext_Shop_deletedAt(ctx, field)
+			case "address":
+				return ec.fieldContext_Shop_address(ctx, field)
 			case "phoneNumber":
-				return ec.fieldContext_Client_phoneNumber(ctx, field)
+				return ec.fieldContext_Shop_phoneNumber(ctx, field)
 			case "notes":
-				return ec.fieldContext_Client_notes(ctx, field)
+				return ec.fieldContext_Shop_notes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
 		},
 	}
 	defer func() {
@@ -3488,15 +2622,15 @@ func (ec *executionContext) fieldContext_ClientMutation_updateClient(ctx context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ClientMutation_updateClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_updateShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _ClientMutation_deleteClient(ctx context.Context, field graphql.CollectedField, obj *model.ClientMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ClientMutation_deleteClient(ctx, field)
+func (ec *executionContext) _Mutation_deleteShop(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteShop(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3509,7 +2643,7 @@ func (ec *executionContext) _ClientMutation_deleteClient(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.DeleteClient, nil
+		return ec.resolvers.Mutation().DeleteShop(rctx, fc.Args["id"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3521,35 +2655,35 @@ func (ec *executionContext) _ClientMutation_deleteClient(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Client)
+	res := resTmp.(*Shop)
 	fc.Result = res
-	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx, field.Selections, res)
+	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ClientMutation_deleteClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_deleteShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "ClientMutation",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Client_id(ctx, field)
+				return ec.fieldContext_Shop_id(ctx, field)
 			case "createdAt":
-				return ec.fieldContext_Client_createdAt(ctx, field)
+				return ec.fieldContext_Shop_createdAt(ctx, field)
 			case "updatedAt":
-				return ec.fieldContext_Client_updatedAt(ctx, field)
+				return ec.fieldContext_Shop_updatedAt(ctx, field)
 			case "deletedAt":
-				return ec.fieldContext_Client_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Client_name(ctx, field)
+				return ec.fieldContext_Shop_deletedAt(ctx, field)
+			case "address":
+				return ec.fieldContext_Shop_address(ctx, field)
 			case "phoneNumber":
-				return ec.fieldContext_Client_phoneNumber(ctx, field)
+				return ec.fieldContext_Shop_phoneNumber(ctx, field)
 			case "notes":
-				return ec.fieldContext_Client_notes(ctx, field)
+				return ec.fieldContext_Shop_notes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
 		},
 	}
 	defer func() {
@@ -3559,15 +2693,15 @@ func (ec *executionContext) fieldContext_ClientMutation_deleteClient(ctx context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ClientMutation_deleteClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_deleteShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _ClientQuery_listClient(ctx context.Context, field graphql.CollectedField, obj *model.ClientQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ClientQuery_listClient(ctx, field)
+func (ec *executionContext) _Mutation_createService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createService(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3580,7 +2714,7 @@ func (ec *executionContext) _ClientQuery_listClient(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ListClient, nil
+		return ec.resolvers.Mutation().CreateService(rctx, fc.Args["input"].(ServiceInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3592,42 +2726,53 @@ func (ec *executionContext) _ClientQuery_listClient(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Client)
+	res := resTmp.(*Service)
 	fc.Result = res
-	return ec.marshalNClient2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClientᚄ(ctx, field.Selections, res)
+	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ClientQuery_listClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "ClientQuery",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Client_id(ctx, field)
+				return ec.fieldContext_Service_id(ctx, field)
 			case "createdAt":
-				return ec.fieldContext_Client_createdAt(ctx, field)
+				return ec.fieldContext_Service_createdAt(ctx, field)
 			case "updatedAt":
-				return ec.fieldContext_Client_updatedAt(ctx, field)
+				return ec.fieldContext_Service_updatedAt(ctx, field)
 			case "deletedAt":
-				return ec.fieldContext_Client_deletedAt(ctx, field)
+				return ec.fieldContext_Service_deletedAt(ctx, field)
 			case "name":
-				return ec.fieldContext_Client_name(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Client_phoneNumber(ctx, field)
+				return ec.fieldContext_Service_name(ctx, field)
+			case "cost":
+				return ec.fieldContext_Service_cost(ctx, field)
 			case "notes":
-				return ec.fieldContext_Client_notes(ctx, field)
+				return ec.fieldContext_Service_notes(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _ClientQuery_getClient(ctx context.Context, field graphql.CollectedField, obj *model.ClientQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ClientQuery_getClient(ctx, field)
+func (ec *executionContext) _Mutation_updateService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateService(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3640,7 +2785,7 @@ func (ec *executionContext) _ClientQuery_getClient(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.GetClient, nil
+		return ec.resolvers.Mutation().UpdateService(rctx, fc.Args["id"].(int), fc.Args["input"].(ServiceInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3652,17 +2797,159 @@ func (ec *executionContext) _ClientQuery_getClient(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Client)
+	res := resTmp.(*Service)
 	fc.Result = res
-	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx, field.Selections, res)
+	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_ClientQuery_getClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_updateService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "ClientQuery",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Service_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Service_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Service_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Service_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Service_name(ctx, field)
+			case "cost":
+				return ec.fieldContext_Service_cost(ctx, field)
+			case "notes":
+				return ec.fieldContext_Service_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteService(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteService(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Service)
+	fc.Result = res
+	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Service_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Service_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Service_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Service_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Service_name(ctx, field)
+			case "cost":
+				return ec.fieldContext_Service_cost(ctx, field)
+			case "notes":
+				return ec.fieldContext_Service_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createClient(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createClient(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateClient(rctx, fc.Args["input"].(ClientInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Client)
+	fc.Result = res
+	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -3690,7 +2977,1414 @@ func (ec *executionContext) fieldContext_ClientQuery_getClient(ctx context.Conte
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ClientQuery_getClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateClient(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateClient(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateClient(rctx, fc.Args["id"].(int), fc.Args["input"].(ClientInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Client)
+	fc.Result = res
+	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Client_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Client_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Client_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Client_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Client_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Client_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Client_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteClient(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteClient(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteClient(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Client)
+	fc.Result = res
+	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Client_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Client_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Client_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Client_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Client_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Client_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Client_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createBarber(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createBarber(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateBarber(rctx, fc.Args["input"].(BarberInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Barber)
+	fc.Result = res
+	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Barber_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Barber_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Barber_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Barber_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Barber_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Barber_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Barber_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateBarber(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateBarber(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateBarber(rctx, fc.Args["id"].(int), fc.Args["input"].(BarberInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Barber)
+	fc.Result = res
+	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Barber_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Barber_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Barber_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Barber_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Barber_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Barber_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Barber_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteBarber(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteBarber(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteBarber(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Barber)
+	fc.Result = res
+	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Barber_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Barber_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Barber_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Barber_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Barber_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Barber_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Barber_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createAttendance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createAttendance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateAttendance(rctx, fc.Args["input"].(AttendanceInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateAttendance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateAttendance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateAttendance(rctx, fc.Args["id"].(int), fc.Args["input"].(AttendanceInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteAttendance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deleteAttendance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteAttendance(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addAttendanceServices(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addAttendanceServices(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddAttendanceServices(rctx, fc.Args["id"].(int), fc.Args["serviceIDs"].([]int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addAttendanceServices(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addAttendanceServices_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_listShop(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_listShop(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ListShop(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Shop)
+	fc.Result = res
+	return ec.marshalNShop2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShopᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_listShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Shop_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Shop_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Shop_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Shop_deletedAt(ctx, field)
+			case "address":
+				return ec.fieldContext_Shop_address(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Shop_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Shop_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getShop(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getShop(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetShop(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Shop)
+	fc.Result = res
+	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Shop_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Shop_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Shop_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Shop_deletedAt(ctx, field)
+			case "address":
+				return ec.fieldContext_Shop_address(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Shop_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Shop_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_listService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_listService(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ListService(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Service)
+	fc.Result = res
+	return ec.marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_listService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Service_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Service_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Service_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Service_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Service_name(ctx, field)
+			case "cost":
+				return ec.fieldContext_Service_cost(ctx, field)
+			case "notes":
+				return ec.fieldContext_Service_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getService(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetService(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Service)
+	fc.Result = res
+	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Service_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Service_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Service_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Service_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Service_name(ctx, field)
+			case "cost":
+				return ec.fieldContext_Service_cost(ctx, field)
+			case "notes":
+				return ec.fieldContext_Service_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_listClient(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_listClient(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ListClient(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Client)
+	fc.Result = res
+	return ec.marshalNClient2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClientᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_listClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Client_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Client_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Client_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Client_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Client_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Client_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Client_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getClient(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getClient(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetClient(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Client)
+	fc.Result = res
+	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Client_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Client_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Client_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Client_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Client_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Client_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Client_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getClient_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_listBarber(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_listBarber(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ListBarber(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Barber)
+	fc.Result = res
+	return ec.marshalNBarber2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarberᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_listBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Barber_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Barber_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Barber_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Barber_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Barber_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Barber_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Barber_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getBarber(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getBarber(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetBarber(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Barber)
+	fc.Result = res
+	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Barber_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Barber_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Barber_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Barber_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Barber_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Barber_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Barber_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getBarber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_listAttendance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_listAttendance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ListAttendance(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_listAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getAttendance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getAttendance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetAttendance(rctx, fc.Args["id"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_searchAttendance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_searchAttendance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().SearchAttendance(rctx, fc.Args["input"].(AttendanceSearchInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Attendance)
+	fc.Result = res
+	return ec.marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_searchAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_searchAttendance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -3826,7 +4520,7 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_id(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_id(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3870,7 +4564,7 @@ func (ec *executionContext) fieldContext_Service_id(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_createdAt(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3914,7 +4608,7 @@ func (ec *executionContext) fieldContext_Service_createdAt(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_updatedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3958,7 +4652,7 @@ func (ec *executionContext) fieldContext_Service_updatedAt(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_deletedAt(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_deletedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -3999,7 +4693,7 @@ func (ec *executionContext) fieldContext_Service_deletedAt(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_name(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_name(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_name(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4043,7 +4737,7 @@ func (ec *executionContext) fieldContext_Service_name(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_cost(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_cost(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_cost(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4087,7 +4781,7 @@ func (ec *executionContext) fieldContext_Service_cost(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Service_notes(ctx context.Context, field graphql.CollectedField, obj *model.Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_notes(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Service_notes(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4128,351 +4822,7 @@ func (ec *executionContext) fieldContext_Service_notes(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _ServiceMutation_createService(ctx context.Context, field graphql.CollectedField, obj *model.ServiceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ServiceMutation_createService(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CreateService, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Service)
-	fc.Result = res
-	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ServiceMutation_createService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ServiceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Service_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Service_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Service_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Service_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Service_name(ctx, field)
-			case "cost":
-				return ec.fieldContext_Service_cost(ctx, field)
-			case "notes":
-				return ec.fieldContext_Service_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ServiceMutation_createService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ServiceMutation_updateService(ctx context.Context, field graphql.CollectedField, obj *model.ServiceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ServiceMutation_updateService(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateService, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Service)
-	fc.Result = res
-	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ServiceMutation_updateService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ServiceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Service_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Service_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Service_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Service_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Service_name(ctx, field)
-			case "cost":
-				return ec.fieldContext_Service_cost(ctx, field)
-			case "notes":
-				return ec.fieldContext_Service_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ServiceMutation_updateService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ServiceMutation_deleteService(ctx context.Context, field graphql.CollectedField, obj *model.ServiceMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ServiceMutation_deleteService(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.DeleteService, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Service)
-	fc.Result = res
-	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ServiceMutation_deleteService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ServiceMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Service_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Service_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Service_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Service_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Service_name(ctx, field)
-			case "cost":
-				return ec.fieldContext_Service_cost(ctx, field)
-			case "notes":
-				return ec.fieldContext_Service_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ServiceMutation_deleteService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ServiceQuery_listService(ctx context.Context, field graphql.CollectedField, obj *model.ServiceQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ServiceQuery_listService(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ListService, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Service)
-	fc.Result = res
-	return ec.marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ServiceQuery_listService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ServiceQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Service_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Service_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Service_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Service_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Service_name(ctx, field)
-			case "cost":
-				return ec.fieldContext_Service_cost(ctx, field)
-			case "notes":
-				return ec.fieldContext_Service_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ServiceQuery_getService(ctx context.Context, field graphql.CollectedField, obj *model.ServiceQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ServiceQuery_getService(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.GetService, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Service)
-	fc.Result = res
-	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ServiceQuery_getService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ServiceQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Service_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Service_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Service_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Service_deletedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_Service_name(ctx, field)
-			case "cost":
-				return ec.fieldContext_Service_cost(ctx, field)
-			case "notes":
-				return ec.fieldContext_Service_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ServiceQuery_getService_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Shop_id(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_id(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4516,7 +4866,7 @@ func (ec *executionContext) fieldContext_Shop_id(ctx context.Context, field grap
 	return fc, nil
 }
 
-func (ec *executionContext) _Shop_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_createdAt(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_createdAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4560,7 +4910,7 @@ func (ec *executionContext) fieldContext_Shop_createdAt(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Shop_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_updatedAt(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_updatedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4604,7 +4954,7 @@ func (ec *executionContext) fieldContext_Shop_updatedAt(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Shop_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_deletedAt(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_deletedAt(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4645,7 +4995,7 @@ func (ec *executionContext) fieldContext_Shop_deletedAt(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Shop_address(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_address(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_address(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4689,7 +5039,7 @@ func (ec *executionContext) fieldContext_Shop_address(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Shop_phoneNumber(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_phoneNumber(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_phoneNumber(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4730,7 +5080,7 @@ func (ec *executionContext) fieldContext_Shop_phoneNumber(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Shop_notes(ctx context.Context, field graphql.CollectedField, obj *model.Shop) (ret graphql.Marshaler) {
+func (ec *executionContext) _Shop_notes(ctx context.Context, field graphql.CollectedField, obj *Shop) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Shop_notes(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -4767,350 +5117,6 @@ func (ec *executionContext) fieldContext_Shop_notes(ctx context.Context, field g
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ShopMutation_createShop(ctx context.Context, field graphql.CollectedField, obj *model.ShopMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ShopMutation_createShop(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CreateShop, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Shop)
-	fc.Result = res
-	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ShopMutation_createShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ShopMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Shop_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Shop_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Shop_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Shop_deletedAt(ctx, field)
-			case "address":
-				return ec.fieldContext_Shop_address(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Shop_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Shop_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ShopMutation_createShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ShopMutation_updateShop(ctx context.Context, field graphql.CollectedField, obj *model.ShopMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ShopMutation_updateShop(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.UpdateShop, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Shop)
-	fc.Result = res
-	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ShopMutation_updateShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ShopMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Shop_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Shop_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Shop_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Shop_deletedAt(ctx, field)
-			case "address":
-				return ec.fieldContext_Shop_address(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Shop_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Shop_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ShopMutation_updateShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ShopMutation_deleteShop(ctx context.Context, field graphql.CollectedField, obj *model.ShopMutation) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ShopMutation_deleteShop(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.DeleteShop, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Shop)
-	fc.Result = res
-	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ShopMutation_deleteShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ShopMutation",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Shop_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Shop_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Shop_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Shop_deletedAt(ctx, field)
-			case "address":
-				return ec.fieldContext_Shop_address(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Shop_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Shop_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ShopMutation_deleteShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ShopQuery_listShop(ctx context.Context, field graphql.CollectedField, obj *model.ShopQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ShopQuery_listShop(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ListShop, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Shop)
-	fc.Result = res
-	return ec.marshalNShop2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShopᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ShopQuery_listShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ShopQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Shop_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Shop_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Shop_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Shop_deletedAt(ctx, field)
-			case "address":
-				return ec.fieldContext_Shop_address(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Shop_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Shop_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ShopQuery_getShop(ctx context.Context, field graphql.CollectedField, obj *model.ShopQuery) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ShopQuery_getShop(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.GetShop, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Shop)
-	fc.Result = res
-	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ShopQuery_getShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ShopQuery",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Shop_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Shop_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Shop_updatedAt(ctx, field)
-			case "deletedAt":
-				return ec.fieldContext_Shop_deletedAt(ctx, field)
-			case "address":
-				return ec.fieldContext_Shop_address(ctx, field)
-			case "phoneNumber":
-				return ec.fieldContext_Shop_phoneNumber(ctx, field)
-			case "notes":
-				return ec.fieldContext_Shop_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_ShopQuery_getShop_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
 	}
 	return fc, nil
 }
@@ -6888,8 +6894,8 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputAttendanceInput(ctx context.Context, obj interface{}) (model.AttendanceInput, error) {
-	var it model.AttendanceInput
+func (ec *executionContext) unmarshalInputAttendanceInput(ctx context.Context, obj interface{}) (AttendanceInput, error) {
+	var it AttendanceInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -6948,8 +6954,8 @@ func (ec *executionContext) unmarshalInputAttendanceInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputAttendanceSearchInput(ctx context.Context, obj interface{}) (model.AttendanceSearchInput, error) {
-	var it model.AttendanceSearchInput
+func (ec *executionContext) unmarshalInputAttendanceSearchInput(ctx context.Context, obj interface{}) (AttendanceSearchInput, error) {
+	var it AttendanceSearchInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7008,8 +7014,8 @@ func (ec *executionContext) unmarshalInputAttendanceSearchInput(ctx context.Cont
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputBarberInput(ctx context.Context, obj interface{}) (model.BarberInput, error) {
-	var it model.BarberInput
+func (ec *executionContext) unmarshalInputBarberInput(ctx context.Context, obj interface{}) (BarberInput, error) {
+	var it BarberInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7052,8 +7058,8 @@ func (ec *executionContext) unmarshalInputBarberInput(ctx context.Context, obj i
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputClientInput(ctx context.Context, obj interface{}) (model.ClientInput, error) {
-	var it model.ClientInput
+func (ec *executionContext) unmarshalInputClientInput(ctx context.Context, obj interface{}) (ClientInput, error) {
+	var it ClientInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7096,8 +7102,8 @@ func (ec *executionContext) unmarshalInputClientInput(ctx context.Context, obj i
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputServiceInput(ctx context.Context, obj interface{}) (model.ServiceInput, error) {
-	var it model.ServiceInput
+func (ec *executionContext) unmarshalInputServiceInput(ctx context.Context, obj interface{}) (ServiceInput, error) {
+	var it ServiceInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7140,8 +7146,8 @@ func (ec *executionContext) unmarshalInputServiceInput(ctx context.Context, obj 
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputShopInput(ctx context.Context, obj interface{}) (model.ShopInput, error) {
-	var it model.ShopInput
+func (ec *executionContext) unmarshalInputShopInput(ctx context.Context, obj interface{}) (ShopInput, error) {
+	var it ShopInput
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -7194,7 +7200,7 @@ func (ec *executionContext) unmarshalInputShopInput(ctx context.Context, obj int
 
 var attendanceImplementors = []string{"Attendance"}
 
-func (ec *executionContext) _Attendance(ctx context.Context, sel ast.SelectionSet, obj *model.Attendance) graphql.Marshaler {
+func (ec *executionContext) _Attendance(ctx context.Context, sel ast.SelectionSet, obj *Attendance) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, attendanceImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -7274,100 +7280,9 @@ func (ec *executionContext) _Attendance(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
-var attendanceMutationImplementors = []string{"AttendanceMutation"}
-
-func (ec *executionContext) _AttendanceMutation(ctx context.Context, sel ast.SelectionSet, obj *model.AttendanceMutation) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, attendanceMutationImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AttendanceMutation")
-		case "createAttendance":
-
-			out.Values[i] = ec._AttendanceMutation_createAttendance(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "updateAttendance":
-
-			out.Values[i] = ec._AttendanceMutation_updateAttendance(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "deleteAttendance":
-
-			out.Values[i] = ec._AttendanceMutation_deleteAttendance(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "addAttendanceServices":
-
-			out.Values[i] = ec._AttendanceMutation_addAttendanceServices(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var attendanceQueryImplementors = []string{"AttendanceQuery"}
-
-func (ec *executionContext) _AttendanceQuery(ctx context.Context, sel ast.SelectionSet, obj *model.AttendanceQuery) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, attendanceQueryImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AttendanceQuery")
-		case "listAttendance":
-
-			out.Values[i] = ec._AttendanceQuery_listAttendance(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "getAttendance":
-
-			out.Values[i] = ec._AttendanceQuery_getAttendance(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "searchAttendance":
-
-			out.Values[i] = ec._AttendanceQuery_searchAttendance(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var barberImplementors = []string{"Barber"}
 
-func (ec *executionContext) _Barber(ctx context.Context, sel ast.SelectionSet, obj *model.Barber) graphql.Marshaler {
+func (ec *executionContext) _Barber(ctx context.Context, sel ast.SelectionSet, obj *Barber) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, barberImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -7426,86 +7341,9 @@ func (ec *executionContext) _Barber(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
-var barberMutationImplementors = []string{"BarberMutation"}
-
-func (ec *executionContext) _BarberMutation(ctx context.Context, sel ast.SelectionSet, obj *model.BarberMutation) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, barberMutationImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("BarberMutation")
-		case "createBarber":
-
-			out.Values[i] = ec._BarberMutation_createBarber(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "updateBarber":
-
-			out.Values[i] = ec._BarberMutation_updateBarber(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "deleteBarber":
-
-			out.Values[i] = ec._BarberMutation_deleteBarber(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var barberQueryImplementors = []string{"BarberQuery"}
-
-func (ec *executionContext) _BarberQuery(ctx context.Context, sel ast.SelectionSet, obj *model.BarberQuery) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, barberQueryImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("BarberQuery")
-		case "listBarber":
-
-			out.Values[i] = ec._BarberQuery_listBarber(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "getBarber":
-
-			out.Values[i] = ec._BarberQuery_getBarber(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var clientImplementors = []string{"Client"}
 
-func (ec *executionContext) _Client(ctx context.Context, sel ast.SelectionSet, obj *model.Client) graphql.Marshaler {
+func (ec *executionContext) _Client(ctx context.Context, sel ast.SelectionSet, obj *Client) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, clientImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -7564,68 +7402,165 @@ func (ec *executionContext) _Client(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
-var clientMutationImplementors = []string{"ClientMutation"}
+var mutationImplementors = []string{"Mutation"}
 
-func (ec *executionContext) _ClientMutation(ctx context.Context, sel ast.SelectionSet, obj *model.ClientMutation) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, clientMutationImplementors)
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("ClientMutation")
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createShop":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createShop(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateShop":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateShop(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteShop":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteShop(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createService":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createService(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateService":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateService(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteService":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteService(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createClient":
 
-			out.Values[i] = ec._ClientMutation_createClient(ctx, field, obj)
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createClient(ctx, field)
+			})
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "updateClient":
 
-			out.Values[i] = ec._ClientMutation_updateClient(ctx, field, obj)
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateClient(ctx, field)
+			})
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "deleteClient":
 
-			out.Values[i] = ec._ClientMutation_deleteClient(ctx, field, obj)
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteClient(ctx, field)
+			})
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
+		case "createBarber":
 
-var clientQueryImplementors = []string{"ClientQuery"}
-
-func (ec *executionContext) _ClientQuery(ctx context.Context, sel ast.SelectionSet, obj *model.ClientQuery) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, clientQueryImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ClientQuery")
-		case "listClient":
-
-			out.Values[i] = ec._ClientQuery_listClient(ctx, field, obj)
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createBarber(ctx, field)
+			})
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "getClient":
+		case "updateBarber":
 
-			out.Values[i] = ec._ClientQuery_getClient(ctx, field, obj)
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateBarber(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteBarber":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteBarber(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createAttendance":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createAttendance(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateAttendance":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateAttendance(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteAttendance":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteAttendance(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "addAttendanceServices":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addAttendanceServices(ctx, field)
+			})
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -7660,6 +7595,259 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "listShop":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listShop(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getShop":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getShop(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "listService":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listService(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getService":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getService(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "listClient":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listClient(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getClient":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getClient(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "listBarber":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listBarber(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getBarber":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getBarber(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "listAttendance":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_listAttendance(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getAttendance":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getAttendance(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "searchAttendance":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_searchAttendance(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "__type":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -7685,7 +7873,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 var serviceImplementors = []string{"Service"}
 
-func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, obj *model.Service) graphql.Marshaler {
+func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, obj *Service) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, serviceImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -7747,86 +7935,9 @@ func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
-var serviceMutationImplementors = []string{"ServiceMutation"}
-
-func (ec *executionContext) _ServiceMutation(ctx context.Context, sel ast.SelectionSet, obj *model.ServiceMutation) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, serviceMutationImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ServiceMutation")
-		case "createService":
-
-			out.Values[i] = ec._ServiceMutation_createService(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "updateService":
-
-			out.Values[i] = ec._ServiceMutation_updateService(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "deleteService":
-
-			out.Values[i] = ec._ServiceMutation_deleteService(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var serviceQueryImplementors = []string{"ServiceQuery"}
-
-func (ec *executionContext) _ServiceQuery(ctx context.Context, sel ast.SelectionSet, obj *model.ServiceQuery) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, serviceQueryImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ServiceQuery")
-		case "listService":
-
-			out.Values[i] = ec._ServiceQuery_listService(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "getService":
-
-			out.Values[i] = ec._ServiceQuery_getService(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var shopImplementors = []string{"Shop"}
 
-func (ec *executionContext) _Shop(ctx context.Context, sel ast.SelectionSet, obj *model.Shop) graphql.Marshaler {
+func (ec *executionContext) _Shop(ctx context.Context, sel ast.SelectionSet, obj *Shop) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, shopImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
@@ -7874,83 +7985,6 @@ func (ec *executionContext) _Shop(ctx context.Context, sel ast.SelectionSet, obj
 
 			out.Values[i] = ec._Shop_notes(ctx, field, obj)
 
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var shopMutationImplementors = []string{"ShopMutation"}
-
-func (ec *executionContext) _ShopMutation(ctx context.Context, sel ast.SelectionSet, obj *model.ShopMutation) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, shopMutationImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ShopMutation")
-		case "createShop":
-
-			out.Values[i] = ec._ShopMutation_createShop(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "updateShop":
-
-			out.Values[i] = ec._ShopMutation_updateShop(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "deleteShop":
-
-			out.Values[i] = ec._ShopMutation_deleteShop(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var shopQueryImplementors = []string{"ShopQuery"}
-
-func (ec *executionContext) _ShopQuery(ctx context.Context, sel ast.SelectionSet, obj *model.ShopQuery) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, shopQueryImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ShopQuery")
-		case "listShop":
-
-			out.Values[i] = ec._ShopQuery_listShop(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "getShop":
-
-			out.Values[i] = ec._ShopQuery_getShop(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8280,7 +8314,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Attendance) graphql.Marshaler {
+func (ec *executionContext) marshalNAttendance2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx context.Context, sel ast.SelectionSet, v Attendance) graphql.Marshaler {
+	return ec._Attendance(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceᚄ(ctx context.Context, sel ast.SelectionSet, v []*Attendance) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8304,7 +8342,7 @@ func (ec *executionContext) marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋba
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx, sel, v[i])
+			ret[i] = ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8324,7 +8362,7 @@ func (ec *executionContext) marshalNAttendance2ᚕᚖgithubᚗcomᚋdsogariᚋba
 	return ret
 }
 
-func (ec *executionContext) marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendance(ctx context.Context, sel ast.SelectionSet, v *model.Attendance) graphql.Marshaler {
+func (ec *executionContext) marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx context.Context, sel ast.SelectionSet, v *Attendance) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8334,17 +8372,21 @@ func (ec *executionContext) marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarbe
 	return ec._Attendance(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNAttendanceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceInput(ctx context.Context, v interface{}) (model.AttendanceInput, error) {
+func (ec *executionContext) unmarshalNAttendanceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceInput(ctx context.Context, v interface{}) (AttendanceInput, error) {
 	res, err := ec.unmarshalInputAttendanceInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNAttendanceSearchInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐAttendanceSearchInput(ctx context.Context, v interface{}) (model.AttendanceSearchInput, error) {
+func (ec *executionContext) unmarshalNAttendanceSearchInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendanceSearchInput(ctx context.Context, v interface{}) (AttendanceSearchInput, error) {
 	res, err := ec.unmarshalInputAttendanceSearchInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNBarber2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarberᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Barber) graphql.Marshaler {
+func (ec *executionContext) marshalNBarber2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx context.Context, sel ast.SelectionSet, v Barber) graphql.Marshaler {
+	return ec._Barber(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNBarber2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarberᚄ(ctx context.Context, sel ast.SelectionSet, v []*Barber) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8368,7 +8410,7 @@ func (ec *executionContext) marshalNBarber2ᚕᚖgithubᚗcomᚋdsogariᚋbarber
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx, sel, v[i])
+			ret[i] = ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8388,7 +8430,7 @@ func (ec *executionContext) marshalNBarber2ᚕᚖgithubᚗcomᚋdsogariᚋbarber
 	return ret
 }
 
-func (ec *executionContext) marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarber(ctx context.Context, sel ast.SelectionSet, v *model.Barber) graphql.Marshaler {
+func (ec *executionContext) marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx context.Context, sel ast.SelectionSet, v *Barber) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8398,7 +8440,7 @@ func (ec *executionContext) marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑ
 	return ec._Barber(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNBarberInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐBarberInput(ctx context.Context, v interface{}) (model.BarberInput, error) {
+func (ec *executionContext) unmarshalNBarberInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarberInput(ctx context.Context, v interface{}) (BarberInput, error) {
 	res, err := ec.unmarshalInputBarberInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -8418,7 +8460,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNClient2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClientᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Client) graphql.Marshaler {
+func (ec *executionContext) marshalNClient2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx context.Context, sel ast.SelectionSet, v Client) graphql.Marshaler {
+	return ec._Client(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNClient2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClientᚄ(ctx context.Context, sel ast.SelectionSet, v []*Client) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8442,7 +8488,7 @@ func (ec *executionContext) marshalNClient2ᚕᚖgithubᚗcomᚋdsogariᚋbarber
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx, sel, v[i])
+			ret[i] = ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8462,7 +8508,7 @@ func (ec *executionContext) marshalNClient2ᚕᚖgithubᚗcomᚋdsogariᚋbarber
 	return ret
 }
 
-func (ec *executionContext) marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClient(ctx context.Context, sel ast.SelectionSet, v *model.Client) graphql.Marshaler {
+func (ec *executionContext) marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx context.Context, sel ast.SelectionSet, v *Client) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8472,7 +8518,7 @@ func (ec *executionContext) marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑ
 	return ec._Client(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNClientInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐClientInput(ctx context.Context, v interface{}) (model.ClientInput, error) {
+func (ec *executionContext) unmarshalNClientInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClientInput(ctx context.Context, v interface{}) (ClientInput, error) {
 	res, err := ec.unmarshalInputClientInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -8524,7 +8570,11 @@ func (ec *executionContext) marshalNInt2ᚕintᚄ(ctx context.Context, sel ast.S
 	return ret
 }
 
-func (ec *executionContext) marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Service) graphql.Marshaler {
+func (ec *executionContext) marshalNService2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx context.Context, sel ast.SelectionSet, v Service) graphql.Marshaler {
+	return ec._Service(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx context.Context, sel ast.SelectionSet, v []*Service) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8548,7 +8598,7 @@ func (ec *executionContext) marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarbe
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx, sel, v[i])
+			ret[i] = ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8568,7 +8618,7 @@ func (ec *executionContext) marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarbe
 	return ret
 }
 
-func (ec *executionContext) marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx context.Context, sel ast.SelectionSet, v *model.Service) graphql.Marshaler {
+func (ec *executionContext) marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx context.Context, sel ast.SelectionSet, v *Service) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8578,12 +8628,16 @@ func (ec *executionContext) marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarber�
 	return ec._Service(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNServiceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceInput(ctx context.Context, v interface{}) (model.ServiceInput, error) {
+func (ec *executionContext) unmarshalNServiceInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceInput(ctx context.Context, v interface{}) (ServiceInput, error) {
 	res, err := ec.unmarshalInputServiceInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNShop2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShopᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Shop) graphql.Marshaler {
+func (ec *executionContext) marshalNShop2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx context.Context, sel ast.SelectionSet, v Shop) graphql.Marshaler {
+	return ec._Shop(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNShop2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShopᚄ(ctx context.Context, sel ast.SelectionSet, v []*Shop) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -8607,7 +8661,7 @@ func (ec *executionContext) marshalNShop2ᚕᚖgithubᚗcomᚋdsogariᚋbarber�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx, sel, v[i])
+			ret[i] = ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -8627,7 +8681,7 @@ func (ec *executionContext) marshalNShop2ᚕᚖgithubᚗcomᚋdsogariᚋbarber�
 	return ret
 }
 
-func (ec *executionContext) marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShop(ctx context.Context, sel ast.SelectionSet, v *model.Shop) graphql.Marshaler {
+func (ec *executionContext) marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx context.Context, sel ast.SelectionSet, v *Shop) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8637,7 +8691,7 @@ func (ec *executionContext) marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑsh
 	return ec._Shop(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNShopInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐShopInput(ctx context.Context, v interface{}) (model.ShopInput, error) {
+func (ec *executionContext) unmarshalNShopInput2githubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShopInput(ctx context.Context, v interface{}) (ShopInput, error) {
 	res, err := ec.unmarshalInputShopInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -8990,7 +9044,7 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐServiceᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Service) graphql.Marshaler {
+func (ec *executionContext) marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx context.Context, sel ast.SelectionSet, v []*Service) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -9017,7 +9071,7 @@ func (ec *executionContext) marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarbe
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋmodelᚐService(ctx, sel, v[i])
+			ret[i] = ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

@@ -3,19 +3,19 @@ package rest
 import (
 	"net/http"
 
-	"github.com/dsogari/barber-shop/graph/model"
+	"github.com/dsogari/barber-shop/graph/generated"
 	"github.com/dsogari/barber-shop/orm"
 	"github.com/gin-gonic/gin"
 )
 
 type Object interface {
-	model.Shop | model.Barber | model.Service | model.Client | model.Attendance
+	generated.Shop | generated.Barber | generated.Service | generated.Client | generated.Attendance
 }
 
 func listObject[T Object](c *gin.Context) {
 	var objects []T
 	var err error
-	if _, ok := interface{}(objects).([]model.Attendance); ok {
+	if _, ok := interface{}(objects).([]generated.Attendance); ok {
 		err = orm.Db.Preload("Services").Find(&objects).Error
 	} else {
 		err = orm.Db.Find(&objects).Error
@@ -33,7 +33,7 @@ func getObject[T Object](c *gin.Context) {
 
 	var object T
 	var err error
-	if _, ok := interface{}(object).(model.Attendance); ok {
+	if _, ok := interface{}(object).(generated.Attendance); ok {
 		err = orm.Db.Preload("Services").First(&object, id).Error
 	} else {
 		err = orm.Db.First(&object, id).Error

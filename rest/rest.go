@@ -3,7 +3,7 @@ package rest
 import (
 	"net/http"
 
-	"github.com/dsogari/barber-shop/graph/model"
+	"github.com/dsogari/barber-shop/graph/generated"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,39 +38,39 @@ func checkHealth(c *gin.Context) {
 
 func setupEndpoints(r *gin.Engine, g *gin.RouterGroup) {
 	// Shop
-	r.GET("/shop", listObject[model.Shop])
-	r.GET("/shop/:id", getObject[model.Shop])
-	g.POST("/shop", createObject[model.Shop])
-	g.POST("/shop/:id", updateObject[model.Shop])
-	g.DELETE("/shop/:id", deleteObject[model.Shop])
+	r.GET("/shop", listObject[generated.Shop])
+	r.GET("/shop/:id", getObject[generated.Shop])
+	g.POST("/shop", createObject[generated.Shop])
+	g.POST("/shop/:id", updateObject[generated.Shop])
+	g.DELETE("/shop/:id", deleteObject[generated.Shop])
 
 	// Barber
-	r.GET("/barber", listObject[model.Barber])
-	r.GET("/barber/:id", getObject[model.Barber])
-	g.POST("/barber", createObject[model.Barber])
-	g.POST("/barber/:id", updateObject[model.Barber])
-	g.DELETE("/barber/:id", deleteObject[model.Barber])
+	r.GET("/barber", listObject[generated.Barber])
+	r.GET("/barber/:id", getObject[generated.Barber])
+	g.POST("/barber", createObject[generated.Barber])
+	g.POST("/barber/:id", updateObject[generated.Barber])
+	g.DELETE("/barber/:id", deleteObject[generated.Barber])
 
 	// Service
-	r.GET("/service", listObject[model.Service])
-	r.GET("/service/:id", getObject[model.Service])
-	g.POST("/service", createObject[model.Service])
-	g.POST("/service/:id", updateObject[model.Service])
-	g.DELETE("/service/:id", deleteObject[model.Service])
+	r.GET("/service", listObject[generated.Service])
+	r.GET("/service/:id", getObject[generated.Service])
+	g.POST("/service", createObject[generated.Service])
+	g.POST("/service/:id", updateObject[generated.Service])
+	g.DELETE("/service/:id", deleteObject[generated.Service])
 
 	// Client
-	r.GET("/client", listObject[model.Client])
-	r.GET("/client/:id", getObject[model.Client])
-	g.POST("/client", createObject[model.Client])
-	g.POST("/client/:id", updateObject[model.Client])
-	g.DELETE("/client/:id", deleteObject[model.Client])
+	r.GET("/client", listObject[generated.Client])
+	r.GET("/client/:id", getObject[generated.Client])
+	g.POST("/client", createObject[generated.Client])
+	g.POST("/client/:id", updateObject[generated.Client])
+	g.DELETE("/client/:id", deleteObject[generated.Client])
 
 	// Attendance
-	r.GET("/attendance", listObject[model.Attendance])
-	r.GET("/attendance/:id", getObject[model.Attendance])
+	r.GET("/attendance", listObject[generated.Attendance])
+	r.GET("/attendance/:id", getObject[generated.Attendance])
 	r.POST("/query_attendance", queryAttendance)
-	g.POST("/attendance", createObject[model.Attendance])
-	g.POST("/attendance/:id", updateObject[model.Attendance])
-	g.DELETE("/attendance/:id", deleteObject[model.Attendance])
+	g.POST("/attendance", createObject[generated.Attendance])
+	g.POST("/attendance/:id", updateObject[generated.Attendance])
+	g.DELETE("/attendance/:id", deleteObject[generated.Attendance])
 	g.PATCH("/attendance/:id", addAttendanceService)
 }

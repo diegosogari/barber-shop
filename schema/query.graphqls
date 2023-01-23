@@ -1,0 +1,17 @@
+type Query {
+  listShop: [Shop!]!
+  getShop(id: Int!): Shop!
+  
+  listService: [Service!]!
+  getService(id: Int!): Service!
+  
+  listClient: [Client!]!
+  getClient(id: Int!): Client!
+  
+  listBarber: [Barber!]!
+  getBarber(id: Int!): Barber!
+  
+  listAttendance: [Attendance!]!
+  getAttendance(id: Int!): Attendance!
+  searchAttendance(input: AttendanceSearchInput!): [Attendance!]!
+}

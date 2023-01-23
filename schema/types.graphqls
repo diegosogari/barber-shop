@@ -1,0 +1,52 @@
+type Shop {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    address: String!
+    phoneNumber: String
+    notes: String
+}
+
+type Service {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
+    cost: Int!
+    notes: String
+}
+
+type Client {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
+    phoneNumber: String
+    notes: String
+}
+
+type Barber {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
+    phoneNumber: String
+    notes: String
+}
+
+type Attendance {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    shop: Shop!
+    barber: Barber!
+    client: Client!
+    attendedAt: Int!
+    notes: String
+    services: [Service!]
+}
