@@ -9,14 +9,13 @@ import (
 	"fmt"
 
 	"github.com/dsogari/barber-shop/graph/generated"
-	"github.com/dsogari/barber-shop/orm"
 )
 
 // CreateShop is the resolver for the createShop field.
 func (r *mutationResolver) CreateShop(ctx context.Context, input generated.ShopInput) (*generated.Shop, error) {
 	var object generated.Shop
 	object.UpdateFrom(input)
-	err := orm.Db.Create(&object).Error
+	err := Db.Create(&object).Error
 	return &object, err
 }
 
@@ -24,14 +23,14 @@ func (r *mutationResolver) CreateShop(ctx context.Context, input generated.ShopI
 func (r *mutationResolver) UpdateShop(ctx context.Context, id int, input generated.ShopInput) (*generated.Shop, error) {
 	object := generated.Shop{ID: id}
 	object.UpdateFrom(input)
-	err := orm.Db.Model(&object).Updates(object).Error
+	err := Db.Model(&object).Updates(object).Error
 	return &object, err
 }
 
 // DeleteShop is the resolver for the deleteShop field.
 func (r *mutationResolver) DeleteShop(ctx context.Context, id int) (*generated.Shop, error) {
 	var object generated.Shop
-	err := orm.Db.Delete(&object, id).Error
+	err := Db.Delete(&object, id).Error
 	return &object, err
 }
 
@@ -39,7 +38,7 @@ func (r *mutationResolver) DeleteShop(ctx context.Context, id int) (*generated.S
 func (r *mutationResolver) CreateService(ctx context.Context, input generated.ServiceInput) (*generated.Service, error) {
 	var object generated.Service
 	object.UpdateFrom(input)
-	err := orm.Db.Create(&object).Error
+	err := Db.Create(&object).Error
 	return &object, err
 }
 
@@ -47,14 +46,14 @@ func (r *mutationResolver) CreateService(ctx context.Context, input generated.Se
 func (r *mutationResolver) UpdateService(ctx context.Context, id int, input generated.ServiceInput) (*generated.Service, error) {
 	object := generated.Service{ID: id}
 	object.UpdateFrom(input)
-	err := orm.Db.Model(&object).Updates(object).Error
+	err := Db.Model(&object).Updates(object).Error
 	return &object, err
 }
 
 // DeleteService is the resolver for the deleteService field.
 func (r *mutationResolver) DeleteService(ctx context.Context, id int) (*generated.Service, error) {
 	var object generated.Service
-	err := orm.Db.Delete(&object, id).Error
+	err := Db.Delete(&object, id).Error
 	return &object, err
 }
 
@@ -62,7 +61,7 @@ func (r *mutationResolver) DeleteService(ctx context.Context, id int) (*generate
 func (r *mutationResolver) CreateClient(ctx context.Context, input generated.ClientInput) (*generated.Client, error) {
 	var object generated.Client
 	object.UpdateFrom(input)
-	err := orm.Db.Create(&object).Error
+	err := Db.Create(&object).Error
 	return &object, err
 }
 
@@ -70,14 +69,14 @@ func (r *mutationResolver) CreateClient(ctx context.Context, input generated.Cli
 func (r *mutationResolver) UpdateClient(ctx context.Context, id int, input generated.ClientInput) (*generated.Client, error) {
 	object := generated.Client{ID: id}
 	object.UpdateFrom(input)
-	err := orm.Db.Model(&object).Updates(object).Error
+	err := Db.Model(&object).Updates(object).Error
 	return &object, err
 }
 
 // DeleteClient is the resolver for the deleteClient field.
 func (r *mutationResolver) DeleteClient(ctx context.Context, id int) (*generated.Client, error) {
 	var object generated.Client
-	err := orm.Db.Delete(&object, id).Error
+	err := Db.Delete(&object, id).Error
 	return &object, err
 }
 
@@ -85,7 +84,7 @@ func (r *mutationResolver) DeleteClient(ctx context.Context, id int) (*generated
 func (r *mutationResolver) CreateBarber(ctx context.Context, input generated.BarberInput) (*generated.Barber, error) {
 	var object generated.Barber
 	object.UpdateFrom(input)
-	err := orm.Db.Create(&object).Error
+	err := Db.Create(&object).Error
 	return &object, err
 }
 
@@ -93,14 +92,14 @@ func (r *mutationResolver) CreateBarber(ctx context.Context, input generated.Bar
 func (r *mutationResolver) UpdateBarber(ctx context.Context, id int, input generated.BarberInput) (*generated.Barber, error) {
 	object := generated.Barber{ID: id}
 	object.UpdateFrom(input)
-	err := orm.Db.Model(&object).Updates(object).Error
+	err := Db.Model(&object).Updates(object).Error
 	return &object, err
 }
 
 // DeleteBarber is the resolver for the deleteBarber field.
 func (r *mutationResolver) DeleteBarber(ctx context.Context, id int) (*generated.Barber, error) {
 	var object generated.Barber
-	err := orm.Db.Delete(&object, id).Error
+	err := Db.Delete(&object, id).Error
 	return &object, err
 }
 
@@ -108,7 +107,7 @@ func (r *mutationResolver) DeleteBarber(ctx context.Context, id int) (*generated
 func (r *mutationResolver) CreateAttendance(ctx context.Context, input generated.AttendanceInput) (*generated.Attendance, error) {
 	var object generated.Attendance
 	object.UpdateFrom(input)
-	err := orm.Db.Create(&object).Error
+	err := Db.Create(&object).Error
 	return &object, err
 }
 
@@ -116,14 +115,14 @@ func (r *mutationResolver) CreateAttendance(ctx context.Context, input generated
 func (r *mutationResolver) UpdateAttendance(ctx context.Context, id int, input generated.AttendanceInput) (*generated.Attendance, error) {
 	object := generated.Attendance{ID: id}
 	object.UpdateFrom(input)
-	err := orm.Db.Model(&object).Updates(object).Error
+	err := Db.Model(&object).Updates(object).Error
 	return &object, err
 }
 
 // DeleteAttendance is the resolver for the deleteAttendance field.
 func (r *mutationResolver) DeleteAttendance(ctx context.Context, id int) (*generated.Attendance, error) {
 	var object generated.Attendance
-	err := orm.Db.Delete(&object, id).Error
+	err := Db.Delete(&object, id).Error
 	return &object, err
 }
 

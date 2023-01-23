@@ -903,8 +903,8 @@ input AttendanceSearchInput {
     updatedAt: Int!
     deletedAt: Int
     address: String!
-    phoneNumber: String
-    notes: String
+    phoneNumber: String!
+    notes: String!
 }
 
 type Service {
@@ -914,7 +914,7 @@ type Service {
     deletedAt: Int
     name: String!
     cost: Int!
-    notes: String
+    notes: String!
 }
 
 type Client {
@@ -923,8 +923,8 @@ type Client {
     updatedAt: Int!
     deletedAt: Int
     name: String!
-    phoneNumber: String
-    notes: String
+    phoneNumber: String!
+    notes: String!
 }
 
 type Barber {
@@ -933,8 +933,8 @@ type Barber {
     updatedAt: Int!
     deletedAt: Int
     name: String!
-    phoneNumber: String
-    notes: String
+    phoneNumber: String!
+    notes: String!
 }
 
 type Attendance {
@@ -946,8 +946,8 @@ type Attendance {
     barber: Barber!
     client: Client!
     attendedAt: Int!
-    notes: String
-    services: [Service!]
+    notes: String!
+    services: [Service!]!
 }
 `, BuiltIn: false},
 }
@@ -1812,11 +1812,14 @@ func (ec *executionContext) _Attendance_notes(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Attendance_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1853,11 +1856,14 @@ func (ec *executionContext) _Attendance_services(ctx context.Context, field grap
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.([]*Service)
 	fc.Result = res
-	return ec.marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx, field.Selections, res)
+	return ec.marshalNService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Attendance_services(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2127,11 +2133,14 @@ func (ec *executionContext) _Barber_phoneNumber(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Barber_phoneNumber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2168,11 +2177,14 @@ func (ec *executionContext) _Barber_notes(ctx context.Context, field graphql.Col
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Barber_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2426,11 +2438,14 @@ func (ec *executionContext) _Client_phoneNumber(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Client_phoneNumber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2467,11 +2482,14 @@ func (ec *executionContext) _Client_notes(ctx context.Context, field graphql.Col
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Client_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4802,11 +4820,14 @@ func (ec *executionContext) _Service_notes(ctx context.Context, field graphql.Co
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Service_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5060,11 +5081,14 @@ func (ec *executionContext) _Shop_phoneNumber(ctx context.Context, field graphql
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Shop_phoneNumber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5101,11 +5125,14 @@ func (ec *executionContext) _Shop_notes(ctx context.Context, field graphql.Colle
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Shop_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -7265,10 +7292,16 @@ func (ec *executionContext) _Attendance(ctx context.Context, sel ast.SelectionSe
 
 			out.Values[i] = ec._Attendance_notes(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "services":
 
 			out.Values[i] = ec._Attendance_services(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7326,10 +7359,16 @@ func (ec *executionContext) _Barber(ctx context.Context, sel ast.SelectionSet, o
 
 			out.Values[i] = ec._Barber_phoneNumber(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "notes":
 
 			out.Values[i] = ec._Barber_notes(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7387,10 +7426,16 @@ func (ec *executionContext) _Client(ctx context.Context, sel ast.SelectionSet, o
 
 			out.Values[i] = ec._Client_phoneNumber(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "notes":
 
 			out.Values[i] = ec._Client_notes(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7924,6 +7969,9 @@ func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, 
 
 			out.Values[i] = ec._Service_notes(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7981,10 +8029,16 @@ func (ec *executionContext) _Shop(ctx context.Context, sel ast.SelectionSet, obj
 
 			out.Values[i] = ec._Shop_phoneNumber(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "notes":
 
 			out.Values[i] = ec._Shop_notes(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9042,53 +9096,6 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	}
 	res := graphql.MarshalInt(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOService2ᚕᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐServiceᚄ(ctx context.Context, sel ast.SelectionSet, v []*Service) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

@@ -5,10 +5,10 @@ func (o *Shop) UpdateFrom(input ShopInput) {
 		o.Address = *input.Address
 	}
 	if input.PhoneNumber != nil {
-		o.PhoneNumber = input.PhoneNumber
+		o.PhoneNumber = *input.PhoneNumber
 	}
 	if input.Notes != nil {
-		o.Notes = input.Notes
+		o.Notes = *input.Notes
 	}
 }
 
@@ -20,7 +20,7 @@ func (o *Service) UpdateFrom(input ServiceInput) {
 		o.Cost = *input.Cost
 	}
 	if input.Notes != nil {
-		o.Notes = input.Notes
+		o.Notes = *input.Notes
 	}
 }
 
@@ -29,10 +29,10 @@ func (o *Client) UpdateFrom(input ClientInput) {
 		o.Name = *input.Name
 	}
 	if input.PhoneNumber != nil {
-		o.PhoneNumber = input.PhoneNumber
+		o.PhoneNumber = *input.PhoneNumber
 	}
 	if input.Notes != nil {
-		o.Notes = input.Notes
+		o.Notes = *input.Notes
 	}
 }
 
@@ -41,10 +41,10 @@ func (o *Barber) UpdateFrom(input BarberInput) {
 		o.Name = *input.Name
 	}
 	if input.PhoneNumber != nil {
-		o.PhoneNumber = input.PhoneNumber
+		o.PhoneNumber = *input.PhoneNumber
 	}
 	if input.Notes != nil {
-		o.Notes = input.Notes
+		o.Notes = *input.Notes
 	}
 }
 
@@ -62,6 +62,6 @@ func (o *Attendance) UpdateFrom(input AttendanceInput) {
 		o.AttendedAt = *input.AttendedAt
 	}
 	if input.Notes != nil {
-		o.Notes = input.Notes
+		o.Notes = *input.Notes
 	}
 }

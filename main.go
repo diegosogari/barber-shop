@@ -4,39 +4,46 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"sync"
 
-	"github.com/dsogari/barber-shop/graph"
-	"github.com/dsogari/barber-shop/orm"
-	"github.com/dsogari/barber-shop/rest"
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/dsogari/barber-shop/graph/generated"
+	"github.com/dsogari/barber-shop/graph/resolvers"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-func main() {
-	dbFilename := flag.String("database", "test.db", "Path to the database file")
-	restPort := flag.String("rest_port", "8080", "Port to serve the REST API")
-	graphqlPort := flag.String("graphql_port", "8081", "Port to serve the GraphQL API")
+var dbFilename string
+var serverPort string
+
+func SetupFlags() {
+	flag.StringVar(&dbFilename, "db_filename", "test.db", "Path to the database file")
+	flag.StringVar(&serverPort, "server_port", "8080", "Port to serve the GraphQL API")
 	flag.Parse()
+}
 
-	orm.SetupDatabase(*dbFilename)
-	restServer := rest.SetupServer()
-	/*graphServer := */ graph.SetupServer()
+func SetupDatabase() {
+	log.Printf("Opening database: %s", dbFilename)
+	dialector := sqlite.Open(dbFilename + "?_foreign_keys=on")
+	if db, err := gorm.Open(dialector, &gorm.Config{}); err != nil {
+		log.Fatal(err)
+	} else {
+		resolvers.MigrateSchema(db)
+	}
+}
 
-	var wg sync.WaitGroup
+func SetupServer() {
+	config := generated.Config{Resolvers: &resolvers.Resolver{}}
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
+	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	http.Handle("/query", srv)
+}
 
-	// Listen and serve REST
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		log.Fatal(restServer.Run(":" + *restPort))
-	}()
+func main() {
+	SetupFlags()
+	SetupDatabase()
+	SetupServer()
 
-	// Listen and serve GraphQL
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", *graphqlPort)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		log.Fatal(http.ListenAndServe(":"+*graphqlPort, nil))
-	}()
-
-	wg.Wait()
+	log.Printf("connect to http://localhost:%s/ for GraphQL playground", serverPort)
+	log.Fatal(http.ListenAndServe(":"+serverPort, nil))
 }

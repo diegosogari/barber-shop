@@ -13,8 +13,8 @@ type Attendance struct {
 	Shop       *Shop      `json:"shop"`
 	Barber     *Barber    `json:"barber"`
 	Client     *Client    `json:"client"`
-	AttendedAt int        `json:"attendedAt"  gorm:"autoCreateTime"`
-	Notes      *string    `json:"notes"`
+	AttendedAt int        `json:"attendedAt" gorm:"autoCreateTime"`
+	Notes      string     `json:"notes"`
 	Services   []*Service `json:"services" gorm:"many2many:attendance_services;"`
 }
 
@@ -35,13 +35,13 @@ type AttendanceSearchInput struct {
 }
 
 type Barber struct {
-	ID          int     `json:"id"`
-	CreatedAt   int     `json:"createdAt"`
-	UpdatedAt   int     `json:"updatedAt"`
-	DeletedAt   *int    `json:"deletedAt"`
-	Name        string  `json:"name"`
-	PhoneNumber *string `json:"phoneNumber"`
-	Notes       *string `json:"notes"`
+	ID          int    `json:"id"`
+	CreatedAt   int    `json:"createdAt"`
+	UpdatedAt   int    `json:"updatedAt"`
+	DeletedAt   *int   `json:"deletedAt"`
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phoneNumber"`
+	Notes       string `json:"notes"`
 }
 
 type BarberInput struct {
@@ -51,13 +51,13 @@ type BarberInput struct {
 }
 
 type Client struct {
-	ID          int     `json:"id"`
-	CreatedAt   int     `json:"createdAt"`
-	UpdatedAt   int     `json:"updatedAt"`
-	DeletedAt   *int    `json:"deletedAt"`
-	Name        string  `json:"name"`
-	PhoneNumber *string `json:"phoneNumber"`
-	Notes       *string `json:"notes"`
+	ID          int    `json:"id"`
+	CreatedAt   int    `json:"createdAt"`
+	UpdatedAt   int    `json:"updatedAt"`
+	DeletedAt   *int   `json:"deletedAt"`
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phoneNumber"`
+	Notes       string `json:"notes"`
 }
 
 type ClientInput struct {
@@ -73,7 +73,7 @@ type Service struct {
 	DeletedAt   *int          `json:"deletedAt"`
 	Name        string        `json:"name"`
 	Cost        int           `json:"cost" gorm:"default:30"`
-	Notes       *string       `json:"notes"`
+	Notes       string        `json:"notes"`
 	Attendances []*Attendance `json:"-" gorm:"many2many:attendance_services;"`
 }
 
@@ -84,13 +84,13 @@ type ServiceInput struct {
 }
 
 type Shop struct {
-	ID          int     `json:"id"`
-	CreatedAt   int     `json:"createdAt"`
-	UpdatedAt   int     `json:"updatedAt"`
-	DeletedAt   *int    `json:"deletedAt"`
-	Address     string  `json:"address"`
-	PhoneNumber *string `json:"phoneNumber"`
-	Notes       *string `json:"notes"`
+	ID          int    `json:"id"`
+	CreatedAt   int    `json:"createdAt"`
+	UpdatedAt   int    `json:"updatedAt"`
+	DeletedAt   *int   `json:"deletedAt"`
+	Address     string `json:"address"`
+	PhoneNumber string `json:"phoneNumber"`
+	Notes       string `json:"notes"`
 }
 
 type ShopInput struct {

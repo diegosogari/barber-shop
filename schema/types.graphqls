@@ -4,8 +4,8 @@ type Shop {
     updatedAt: Int!
     deletedAt: Int
     address: String!
-    phoneNumber: String
-    notes: String
+    phoneNumber: String!
+    notes: String!
 }
 
 type Service {
@@ -15,7 +15,7 @@ type Service {
     deletedAt: Int
     name: String!
     cost: Int!
-    notes: String
+    notes: String!
 }
 
 type Client {
@@ -24,8 +24,8 @@ type Client {
     updatedAt: Int!
     deletedAt: Int
     name: String!
-    phoneNumber: String
-    notes: String
+    phoneNumber: String!
+    notes: String!
 }
 
 type Barber {
@@ -34,8 +34,8 @@ type Barber {
     updatedAt: Int!
     deletedAt: Int
     name: String!
-    phoneNumber: String
-    notes: String
+    phoneNumber: String!
+    notes: String!
 }
 
 type Attendance {
@@ -47,6 +47,6 @@ type Attendance {
     barber: Barber!
     client: Client!
     attendedAt: Int!
-    notes: String
-    services: [Service!]
+    notes: String!
+    services: [Service!]!
 }
