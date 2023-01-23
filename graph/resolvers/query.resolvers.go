@@ -7,63 +7,99 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dsogari/barber-shop/graph/generated"
+	"github.com/dsogari/barber-shop/orm"
 )
 
 // ListShop is the resolver for the listShop field.
 func (r *queryResolver) ListShop(ctx context.Context) ([]*generated.Shop, error) {
-	panic(fmt.Errorf("not implemented: ListShop - listShop"))
+	var objects []*generated.Shop
+	err := orm.Db.Find(&objects).Error
+	return objects, err
 }
 
 // GetShop is the resolver for the getShop field.
 func (r *queryResolver) GetShop(ctx context.Context, id int) (*generated.Shop, error) {
-	panic(fmt.Errorf("not implemented: GetShop - getShop"))
+	var object *generated.Shop
+	err := orm.Db.First(&object, id).Error
+	return object, err
 }
 
 // ListService is the resolver for the listService field.
 func (r *queryResolver) ListService(ctx context.Context) ([]*generated.Service, error) {
-	panic(fmt.Errorf("not implemented: ListService - listService"))
+	var objects []*generated.Service
+	err := orm.Db.Find(&objects).Error
+	return objects, err
 }
 
 // GetService is the resolver for the getService field.
 func (r *queryResolver) GetService(ctx context.Context, id int) (*generated.Service, error) {
-	panic(fmt.Errorf("not implemented: GetService - getService"))
+	var object *generated.Service
+	err := orm.Db.First(&object, id).Error
+	return object, err
 }
 
 // ListClient is the resolver for the listClient field.
 func (r *queryResolver) ListClient(ctx context.Context) ([]*generated.Client, error) {
-	panic(fmt.Errorf("not implemented: ListClient - listClient"))
+	var objects []*generated.Client
+	err := orm.Db.Find(&objects).Error
+	return objects, err
 }
 
 // GetClient is the resolver for the getClient field.
 func (r *queryResolver) GetClient(ctx context.Context, id int) (*generated.Client, error) {
-	panic(fmt.Errorf("not implemented: GetClient - getClient"))
+	var object *generated.Client
+	err := orm.Db.First(&object, id).Error
+	return object, err
 }
 
 // ListBarber is the resolver for the listBarber field.
 func (r *queryResolver) ListBarber(ctx context.Context) ([]*generated.Barber, error) {
-	panic(fmt.Errorf("not implemented: ListBarber - listBarber"))
+	var objects []*generated.Barber
+	err := orm.Db.Find(&objects).Error
+	return objects, err
 }
 
 // GetBarber is the resolver for the getBarber field.
 func (r *queryResolver) GetBarber(ctx context.Context, id int) (*generated.Barber, error) {
-	panic(fmt.Errorf("not implemented: GetBarber - getBarber"))
+	var object *generated.Barber
+	err := orm.Db.First(&object, id).Error
+	return object, err
 }
 
 // ListAttendance is the resolver for the listAttendance field.
 func (r *queryResolver) ListAttendance(ctx context.Context) ([]*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: ListAttendance - listAttendance"))
+	var objects []*generated.Attendance
+	err := orm.Db.Preload("Services").Find(&objects).Error
+	return objects, err
 }
 
 // GetAttendance is the resolver for the getAttendance field.
 func (r *queryResolver) GetAttendance(ctx context.Context, id int) (*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: GetAttendance - getAttendance"))
+	var object *generated.Attendance
+	err := orm.Db.Preload("Services").First(&object, id).Error
+	return object, err
 }
 
 // SearchAttendance is the resolver for the searchAttendance field.
 func (r *queryResolver) SearchAttendance(ctx context.Context, input generated.AttendanceSearchInput) ([]*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: SearchAttendance - searchAttendance"))
+	var objects []*generated.Attendance
+	err := orm.Db.Preload("Services").Find(&objects, "attended_at BETWEEN ? AND ?"+
+		getIntArray("shop_id", input.ShopIDs)+
+		getIntArray("barber_id", input.BarberIDs)+
+		getIntArray("client_id", input.ClientIDs), input.Begin, input.End).Error
+	return objects, err
+}
+
+func getIntArray(columnName string, array []int) string {
+	var result string
+	if len(array) > 0 {
+		str := strings.ReplaceAll(fmt.Sprint(array), " ", ",")
+		result = fmt.Sprintf(" AND %s IN (%s)", columnName, str[1:len(str)-1])
+	}
+	return result
 }
 
 // Query returns generated.QueryResolver implementation.
