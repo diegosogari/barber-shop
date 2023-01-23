@@ -43,7 +43,6 @@ func main() {
 	SetupFlags()
 	SetupDatabase()
 	SetupServer()
-
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", serverPort)
 	log.Fatal(http.ListenAndServe(":"+serverPort, nil))
 }

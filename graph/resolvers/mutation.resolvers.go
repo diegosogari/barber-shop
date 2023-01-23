@@ -6,7 +6,7 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/dsogari/barber-shop/graph/generated"
 )
@@ -128,7 +128,17 @@ func (r *mutationResolver) DeleteAttendance(ctx context.Context, id int) (*gener
 
 // AddAttendanceServices is the resolver for the addAttendanceServices field.
 func (r *mutationResolver) AddAttendanceServices(ctx context.Context, id int, serviceIDs []int) (*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: AddAttendanceServices - addAttendanceServices"))
+	var attendance generated.Attendance
+	var services []generated.Service
+	if len(serviceIDs) == 0 {
+		return nil, errors.New("at least one service ID must be provided")
+	} else if err := Db.First(&attendance, id).Error; err != nil {
+		return nil, err
+	} else if err = Db.Find(&services, serviceIDs).Error; err != nil {
+		return nil, err
+	}
+	err := Db.Model(&attendance).Association("Services").Append(&services)
+	return &attendance, err
 }
 
 // Mutation returns generated.MutationResolver implementation.
