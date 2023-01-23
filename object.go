@@ -6,8 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func listObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context) {
+type Object interface {
+	Shop | Barber | Service | Client | Attendance
+}
+
+func listObject[T Object](c *gin.Context) {
 	var objects []T
+
 	if err := db.Find(&objects).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
@@ -15,10 +20,11 @@ func listObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context)
 	}
 }
 
-func getObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context) {
+func getObject[T Object](c *gin.Context) {
+	var object T
+
 	id := c.Params.ByName("id")
 
-	var object T
 	if err := db.First(&object, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
@@ -26,12 +32,11 @@ func getObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context) 
 	}
 }
 
-func createObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context) {
-	username := c.MustGet(gin.AuthUserKey).(string)
-	println("Requested by user: ", username)
+func createObject[T Object](c *gin.Context) {
+	println("Requested by user: ", c.MustGet(gin.AuthUserKey).(string))
 
-	// Parse JSON
 	var object T
+
 	if err := c.Bind(&object); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": err})
 	} else if err = db.Create(&object).Error; err != nil {
@@ -41,13 +46,13 @@ func createObject[T Shop | Barber | Service | Client | Attendance](c *gin.Contex
 	}
 }
 
-func updateObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context) {
-	username := c.MustGet(gin.AuthUserKey).(string)
-	println("Requested by user: ", username)
+func updateObject[T Object](c *gin.Context) {
+	println("Requested by user: ", c.MustGet(gin.AuthUserKey).(string))
+
+	var object1, object2 T
 
 	id := c.Params.ByName("id")
 
-	var object1, object2 T
 	if err := db.First(&object1, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else if err = c.Bind(&object2); err != nil {
@@ -59,13 +64,13 @@ func updateObject[T Shop | Barber | Service | Client | Attendance](c *gin.Contex
 	}
 }
 
-func deleteObject[T Shop | Barber | Service | Client | Attendance](c *gin.Context) {
-	username := c.MustGet(gin.AuthUserKey).(string)
-	println("Requested by user: ", username)
+func deleteObject[T Object](c *gin.Context) {
+	println("Requested by user: ", c.MustGet(gin.AuthUserKey).(string))
+
+	var object T
 
 	id := c.Params.ByName("id")
 
-	var object T
 	if err := db.Delete(&object, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
