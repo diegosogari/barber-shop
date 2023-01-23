@@ -64,6 +64,7 @@ func setupRouter() *gin.Engine {
 	// Attendance
 	r.GET("/attendance", listObject[Attendance])
 	r.GET("/attendance/:id", getObject[Attendance])
+	r.POST("/query_attendance", queryAttendance)
 	authorized.POST("/attendance", createObject[Attendance])
 	authorized.POST("/attendance/:id", updateObject[Attendance])
 	authorized.DELETE("/attendance/:id", deleteObject[Attendance])

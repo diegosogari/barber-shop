@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,4 +32,36 @@ func addAttendanceService(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, attendance)
 	}
+}
+
+func queryAttendance(c *gin.Context) {
+	var attendances []Attendance
+	var json struct {
+		ShopIDs   []uint
+		BarberIDs []uint
+		ClientIDs []uint
+		Begin     int
+		End       int
+	}
+
+	if err := c.Bind(&json); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": err})
+	} else if err = db.Find(&attendances, "attended_at BETWEEN ? AND ?"+
+		getIntArray("shop_id", json.ShopIDs)+
+		getIntArray("barber_id", json.BarberIDs)+
+		getIntArray("client_id", json.ClientIDs),
+		json.Begin, json.End).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": err})
+	} else {
+		c.JSON(http.StatusOK, attendances)
+	}
+}
+
+func getIntArray(columnName string, array []uint) string {
+	var result string
+	if len(array) > 0 {
+		str := strings.ReplaceAll(fmt.Sprint(array), " ", ",")
+		result = fmt.Sprintf(" AND %s IN (%s)", columnName, str[1:len(str)-1])
+	}
+	return result
 }
