@@ -9,81 +9,122 @@ import (
 	"fmt"
 
 	"github.com/dsogari/barber-shop/graph/generated"
+	"github.com/dsogari/barber-shop/orm"
 )
 
 // CreateShop is the resolver for the createShop field.
 func (r *mutationResolver) CreateShop(ctx context.Context, input generated.ShopInput) (*generated.Shop, error) {
-	panic(fmt.Errorf("not implemented: CreateShop - createShop"))
+	var object generated.Shop
+	object.UpdateFrom(input)
+	err := orm.Db.Create(&object).Error
+	return &object, err
 }
 
 // UpdateShop is the resolver for the updateShop field.
 func (r *mutationResolver) UpdateShop(ctx context.Context, id int, input generated.ShopInput) (*generated.Shop, error) {
-	panic(fmt.Errorf("not implemented: UpdateShop - updateShop"))
+	object := generated.Shop{ID: id}
+	object.UpdateFrom(input)
+	err := orm.Db.Model(&object).Updates(object).Error
+	return &object, err
 }
 
 // DeleteShop is the resolver for the deleteShop field.
 func (r *mutationResolver) DeleteShop(ctx context.Context, id int) (*generated.Shop, error) {
-	panic(fmt.Errorf("not implemented: DeleteShop - deleteShop"))
+	var object generated.Shop
+	err := orm.Db.Delete(&object, id).Error
+	return &object, err
 }
 
 // CreateService is the resolver for the createService field.
 func (r *mutationResolver) CreateService(ctx context.Context, input generated.ServiceInput) (*generated.Service, error) {
-	panic(fmt.Errorf("not implemented: CreateService - createService"))
+	var object generated.Service
+	object.UpdateFrom(input)
+	err := orm.Db.Create(&object).Error
+	return &object, err
 }
 
 // UpdateService is the resolver for the updateService field.
 func (r *mutationResolver) UpdateService(ctx context.Context, id int, input generated.ServiceInput) (*generated.Service, error) {
-	panic(fmt.Errorf("not implemented: UpdateService - updateService"))
+	object := generated.Service{ID: id}
+	object.UpdateFrom(input)
+	err := orm.Db.Model(&object).Updates(object).Error
+	return &object, err
 }
 
 // DeleteService is the resolver for the deleteService field.
 func (r *mutationResolver) DeleteService(ctx context.Context, id int) (*generated.Service, error) {
-	panic(fmt.Errorf("not implemented: DeleteService - deleteService"))
+	var object generated.Service
+	err := orm.Db.Delete(&object, id).Error
+	return &object, err
 }
 
 // CreateClient is the resolver for the createClient field.
 func (r *mutationResolver) CreateClient(ctx context.Context, input generated.ClientInput) (*generated.Client, error) {
-	panic(fmt.Errorf("not implemented: CreateClient - createClient"))
+	var object generated.Client
+	object.UpdateFrom(input)
+	err := orm.Db.Create(&object).Error
+	return &object, err
 }
 
 // UpdateClient is the resolver for the updateClient field.
 func (r *mutationResolver) UpdateClient(ctx context.Context, id int, input generated.ClientInput) (*generated.Client, error) {
-	panic(fmt.Errorf("not implemented: UpdateClient - updateClient"))
+	object := generated.Client{ID: id}
+	object.UpdateFrom(input)
+	err := orm.Db.Model(&object).Updates(object).Error
+	return &object, err
 }
 
 // DeleteClient is the resolver for the deleteClient field.
 func (r *mutationResolver) DeleteClient(ctx context.Context, id int) (*generated.Client, error) {
-	panic(fmt.Errorf("not implemented: DeleteClient - deleteClient"))
+	var object generated.Client
+	err := orm.Db.Delete(&object, id).Error
+	return &object, err
 }
 
 // CreateBarber is the resolver for the createBarber field.
 func (r *mutationResolver) CreateBarber(ctx context.Context, input generated.BarberInput) (*generated.Barber, error) {
-	panic(fmt.Errorf("not implemented: CreateBarber - createBarber"))
+	var object generated.Barber
+	object.UpdateFrom(input)
+	err := orm.Db.Create(&object).Error
+	return &object, err
 }
 
 // UpdateBarber is the resolver for the updateBarber field.
 func (r *mutationResolver) UpdateBarber(ctx context.Context, id int, input generated.BarberInput) (*generated.Barber, error) {
-	panic(fmt.Errorf("not implemented: UpdateBarber - updateBarber"))
+	object := generated.Barber{ID: id}
+	object.UpdateFrom(input)
+	err := orm.Db.Model(&object).Updates(object).Error
+	return &object, err
 }
 
 // DeleteBarber is the resolver for the deleteBarber field.
 func (r *mutationResolver) DeleteBarber(ctx context.Context, id int) (*generated.Barber, error) {
-	panic(fmt.Errorf("not implemented: DeleteBarber - deleteBarber"))
+	var object generated.Barber
+	err := orm.Db.Delete(&object, id).Error
+	return &object, err
 }
 
 // CreateAttendance is the resolver for the createAttendance field.
 func (r *mutationResolver) CreateAttendance(ctx context.Context, input generated.AttendanceInput) (*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: CreateAttendance - createAttendance"))
+	var object generated.Attendance
+	object.UpdateFrom(input)
+	err := orm.Db.Create(&object).Error
+	return &object, err
 }
 
 // UpdateAttendance is the resolver for the updateAttendance field.
 func (r *mutationResolver) UpdateAttendance(ctx context.Context, id int, input generated.AttendanceInput) (*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: UpdateAttendance - updateAttendance"))
+	object := generated.Attendance{ID: id}
+	object.UpdateFrom(input)
+	err := orm.Db.Model(&object).Updates(object).Error
+	return &object, err
 }
 
 // DeleteAttendance is the resolver for the deleteAttendance field.
 func (r *mutationResolver) DeleteAttendance(ctx context.Context, id int) (*generated.Attendance, error) {
-	panic(fmt.Errorf("not implemented: DeleteAttendance - deleteAttendance"))
+	var object generated.Attendance
+	err := orm.Db.Delete(&object, id).Error
+	return &object, err
 }
 
 // AddAttendanceServices is the resolver for the addAttendanceServices field.
