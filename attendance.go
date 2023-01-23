@@ -5,16 +5,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dsogari/barber-shop/graph/model"
 	"github.com/gin-gonic/gin"
 )
 
 func addAttendanceService(c *gin.Context) {
 	println("Requested by user: ", c.MustGet(gin.AuthUserKey).(string))
 
-	var attendance Attendance
-	var services []Service
+	var attendance model.Attendance
+	var services []model.Service
 	var json struct {
-		ServiceIDs []uint `binding:"required"`
+		ServiceIDs []int `binding:"required"`
 	}
 
 	id := c.Params.ByName("id")
@@ -35,7 +36,7 @@ func addAttendanceService(c *gin.Context) {
 }
 
 func queryAttendance(c *gin.Context) {
-	var attendances []Attendance
+	var attendances []model.Attendance
 	var json struct {
 		ShopIDs   []uint
 		BarberIDs []uint

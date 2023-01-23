@@ -4,6 +4,7 @@ import (
 	"flag"
 	"net/http"
 
+	"github.com/dsogari/barber-shop/graph/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -34,40 +35,40 @@ func setupRouter() *gin.Engine {
 	}))
 
 	// Shop
-	r.GET("/shop", listObject[Shop])
-	r.GET("/shop/:id", getObject[Shop])
-	authorized.POST("/shop", createObject[Shop])
-	authorized.POST("/shop/:id", updateObject[Shop])
-	authorized.DELETE("/shop/:id", deleteObject[Shop])
+	r.GET("/shop", listObject[model.Shop])
+	r.GET("/shop/:id", getObject[model.Shop])
+	authorized.POST("/shop", createObject[model.Shop])
+	authorized.POST("/shop/:id", updateObject[model.Shop])
+	authorized.DELETE("/shop/:id", deleteObject[model.Shop])
 
 	// Barber
-	r.GET("/barber", listObject[Barber])
-	r.GET("/barber/:id", getObject[Barber])
-	authorized.POST("/barber", createObject[Barber])
-	authorized.POST("/barber/:id", updateObject[Barber])
-	authorized.DELETE("/barber/:id", deleteObject[Barber])
+	r.GET("/barber", listObject[model.Barber])
+	r.GET("/barber/:id", getObject[model.Barber])
+	authorized.POST("/barber", createObject[model.Barber])
+	authorized.POST("/barber/:id", updateObject[model.Barber])
+	authorized.DELETE("/barber/:id", deleteObject[model.Barber])
 
 	// Service
-	r.GET("/service", listObject[Service])
-	r.GET("/service/:id", getObject[Service])
-	authorized.POST("/service", createObject[Service])
-	authorized.POST("/service/:id", updateObject[Service])
-	authorized.DELETE("/service/:id", deleteObject[Service])
+	r.GET("/service", listObject[model.Service])
+	r.GET("/service/:id", getObject[model.Service])
+	authorized.POST("/service", createObject[model.Service])
+	authorized.POST("/service/:id", updateObject[model.Service])
+	authorized.DELETE("/service/:id", deleteObject[model.Service])
 
 	// Client
-	r.GET("/client", listObject[Client])
-	r.GET("/client/:id", getObject[Client])
-	authorized.POST("/client", createObject[Client])
-	authorized.POST("/client/:id", updateObject[Client])
-	authorized.DELETE("/client/:id", deleteObject[Client])
+	r.GET("/client", listObject[model.Client])
+	r.GET("/client/:id", getObject[model.Client])
+	authorized.POST("/client", createObject[model.Client])
+	authorized.POST("/client/:id", updateObject[model.Client])
+	authorized.DELETE("/client/:id", deleteObject[model.Client])
 
 	// Attendance
-	r.GET("/attendance", listObject[Attendance])
-	r.GET("/attendance/:id", getObject[Attendance])
+	r.GET("/attendance", listObject[model.Attendance])
+	r.GET("/attendance/:id", getObject[model.Attendance])
 	r.POST("/query_attendance", queryAttendance)
-	authorized.POST("/attendance", createObject[Attendance])
-	authorized.POST("/attendance/:id", updateObject[Attendance])
-	authorized.DELETE("/attendance/:id", deleteObject[Attendance])
+	authorized.POST("/attendance", createObject[model.Attendance])
+	authorized.POST("/attendance/:id", updateObject[model.Attendance])
+	authorized.DELETE("/attendance/:id", deleteObject[model.Attendance])
 	authorized.PATCH("/attendance/:id", addAttendanceService)
 
 	return r
@@ -86,11 +87,11 @@ func loadDatabase(filename string) {
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&Shop{})
-	db.AutoMigrate(&Barber{})
-	db.AutoMigrate(&Service{})
-	db.AutoMigrate(&Client{})
-	db.AutoMigrate(&Attendance{})
+	db.AutoMigrate(&model.Shop{})
+	db.AutoMigrate(&model.Barber{})
+	db.AutoMigrate(&model.Service{})
+	db.AutoMigrate(&model.Client{})
+	db.AutoMigrate(&model.Attendance{})
 }
 
 func main() {

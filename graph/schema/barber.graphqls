@@ -1,0 +1,26 @@
+type Barber {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    name: String!
+    phoneNumber: String
+    notes: String
+}
+
+input BarberInput {
+    name: String
+    phoneNumber: String
+    notes: String
+}
+
+type BarberQuery {
+  listBarber: [Barber!]!
+  getBarber(id: Int!): Barber!
+}
+
+type BarberMutation {
+  createBarber(input: BarberInput!): Barber!
+  updateBarber(id: Int!, input: BarberInput!): Barber!
+  deleteBarber(id: Int!): Barber!
+}

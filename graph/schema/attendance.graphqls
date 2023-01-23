@@ -1,0 +1,41 @@
+type Attendance {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    shop: Shop!
+    barber: Barber!
+    client: Client!
+    attendedAt: Int!
+    notes: String
+    services: [Service!]
+}
+
+input AttendanceInput {
+    shopID: Int
+    barberID: Int
+    clientID: Int
+    attendedAt: Int
+    notes: String
+}
+
+input AttendanceSearchInput {
+    shopIDs: [Int!]
+    barberIDs: [Int!]
+    clientIDs: [Int!]
+    begin: Int
+    end: Int
+}
+
+type AttendanceQuery {
+  listAttendance: [Attendance!]!
+  getAttendance(id: Int!): Attendance!
+  searchAttendance(input: AttendanceSearchInput!): [Attendance!]!
+}
+
+type AttendanceMutation {
+  createAttendance(input: AttendanceInput!): Attendance!
+  updateAttendance(id: Int!, input: AttendanceInput!): Attendance!
+  deleteAttendance(id: Int!): Attendance!
+  addAttendanceServices(id: Int!, serviceIDs: [Int!]!): Attendance!
+}

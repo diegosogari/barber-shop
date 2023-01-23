@@ -3,13 +3,15 @@ module github.com/dsogari/barber-shop
 go 1.18
 
 require (
+	github.com/99designs/gqlgen v0.17.22
 	github.com/gin-gonic/gin v1.8.2
-	github.com/lib/pq v1.10.7
+	github.com/vektah/gqlparser/v2 v2.5.1
 	gorm.io/driver/sqlite v1.4.4
 	gorm.io/gorm v1.24.3
 )
 
 require (
+	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect

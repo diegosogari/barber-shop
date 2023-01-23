@@ -3,17 +3,24 @@ package main
 import (
 	"net/http"
 
+	"github.com/dsogari/barber-shop/graph/model"
 	"github.com/gin-gonic/gin"
 )
 
 type Object interface {
-	Shop | Barber | Service | Client | Attendance
+	model.Shop | model.Barber | model.Service | model.Client | model.Attendance
 }
 
 func listObject[T Object](c *gin.Context) {
 	var objects []T
+	var err error
+	if _, ok := interface{}(objects).([]model.Attendance); ok {
+		err = db.Preload("Services").Find(&objects).Error
+	} else {
+		err = db.Find(&objects).Error
+	}
 
-	if err := db.Preload("Services").Find(&objects).Error; err != nil {
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
 		c.JSON(http.StatusOK, objects)
@@ -21,11 +28,17 @@ func listObject[T Object](c *gin.Context) {
 }
 
 func getObject[T Object](c *gin.Context) {
-	var object T
-
 	id := c.Params.ByName("id")
 
-	if err := db.Preload("Services").First(&object, id).Error; err != nil {
+	var object T
+	var err error
+	if _, ok := interface{}(object).(model.Attendance); ok {
+		err = db.Preload("Services").First(&object, id).Error
+	} else {
+		err = db.First(&object, id).Error
+	}
+
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"status": err})
 	} else {
 		c.JSON(http.StatusOK, object)

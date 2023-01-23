@@ -1,0 +1,26 @@
+type Shop {
+    id: Int!
+    createdAt: Int!
+    updatedAt: Int!
+    deletedAt: Int
+    address: String!
+    phoneNumber: String
+    notes: String
+}
+
+input ShopInput {
+    address: String
+    phoneNumber: String
+    notes: String
+}
+
+type ShopQuery {
+  listShop: [Shop!]!
+  getShop(id: Int!): Shop!
+}
+
+type ShopMutation {
+  createShop(input: ShopInput!): Shop!
+  updateShop(id: Int!, input: ShopInput!): Shop!
+  deleteShop(id: Int!): Shop!
+}
