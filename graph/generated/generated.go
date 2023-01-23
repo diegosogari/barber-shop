@@ -816,7 +816,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../../schema/inputs.graphqls", Input: `input ShopInput {
+	{Name: "../schema/inputs.graphqls", Input: `input ShopInput {
     address: String
     phoneNumber: String
     notes: String
@@ -856,7 +856,7 @@ input AttendanceSearchInput {
     end: Int
 }
 `, BuiltIn: false},
-	{Name: "../../schema/mutation.graphqls", Input: `type Mutation {
+	{Name: "../schema/mutation.graphqls", Input: `type Mutation {
   createShop(input: ShopInput!): Shop!
   updateShop(id: Int!, input: ShopInput!): Shop!
   deleteShop(id: Int!): Shop!
@@ -879,7 +879,7 @@ input AttendanceSearchInput {
   addAttendanceServices(id: Int!, serviceIDs: [Int!]!): Attendance!
 }
 `, BuiltIn: false},
-	{Name: "../../schema/query.graphqls", Input: `type Query {
+	{Name: "../schema/query.graphqls", Input: `type Query {
   listShop: [Shop!]!
   getShop(id: Int!): Shop!
   
@@ -897,7 +897,7 @@ input AttendanceSearchInput {
   searchAttendance(input: AttendanceSearchInput!): [Attendance!]!
 }
 `, BuiltIn: false},
-	{Name: "../../schema/types.graphqls", Input: `type Shop {
+	{Name: "../schema/types.graphqls", Input: `type Shop {
     id: Int!
     createdAt: Int!
     updatedAt: Int!
