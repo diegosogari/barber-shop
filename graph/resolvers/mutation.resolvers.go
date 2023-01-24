@@ -6,139 +6,149 @@ package resolvers
 
 import (
 	"context"
-	"errors"
 
 	"github.com/dsogari/barber-shop/graph/generated"
+	"github.com/dsogari/barber-shop/graph/model"
+	"gorm.io/gorm/clause"
 )
 
 // CreateShop is the resolver for the createShop field.
 func (r *mutationResolver) CreateShop(ctx context.Context, input generated.ShopInput) (*generated.Shop, error) {
-	var object generated.Shop
+	var object model.Shop
 	object.UpdateFrom(input)
 	err := Db.Create(&object).Error
-	return &object, err
+	return &object.Shop, err
 }
 
 // UpdateShop is the resolver for the updateShop field.
 func (r *mutationResolver) UpdateShop(ctx context.Context, id int, input generated.ShopInput) (*generated.Shop, error) {
-	object := generated.Shop{ID: id}
+	var object model.Shop
+	object.ID = id
 	object.UpdateFrom(input)
 	err := Db.Model(&object).Updates(object).Error
-	return &object, err
+	return &object.Shop, err
 }
 
 // DeleteShop is the resolver for the deleteShop field.
 func (r *mutationResolver) DeleteShop(ctx context.Context, id int) (*generated.Shop, error) {
-	var object generated.Shop
+	var object model.Shop
 	err := Db.Delete(&object, id).Error
-	return &object, err
+	return &object.Shop, err
 }
 
 // CreateService is the resolver for the createService field.
 func (r *mutationResolver) CreateService(ctx context.Context, input generated.ServiceInput) (*generated.Service, error) {
-	var object generated.Service
+	var object model.Service
 	object.UpdateFrom(input)
 	err := Db.Create(&object).Error
-	return &object, err
+	return &object.Service, err
 }
 
 // UpdateService is the resolver for the updateService field.
 func (r *mutationResolver) UpdateService(ctx context.Context, id int, input generated.ServiceInput) (*generated.Service, error) {
-	object := generated.Service{ID: id}
+	var object model.Service
+	object.ID = id
 	object.UpdateFrom(input)
 	err := Db.Model(&object).Updates(object).Error
-	return &object, err
+	return &object.Service, err
 }
 
 // DeleteService is the resolver for the deleteService field.
 func (r *mutationResolver) DeleteService(ctx context.Context, id int) (*generated.Service, error) {
-	var object generated.Service
+	var object model.Service
 	err := Db.Delete(&object, id).Error
-	return &object, err
+	return &object.Service, err
 }
 
 // CreateClient is the resolver for the createClient field.
 func (r *mutationResolver) CreateClient(ctx context.Context, input generated.ClientInput) (*generated.Client, error) {
-	var object generated.Client
+	var object model.Client
 	object.UpdateFrom(input)
 	err := Db.Create(&object).Error
-	return &object, err
+	return &object.Client, err
 }
 
 // UpdateClient is the resolver for the updateClient field.
 func (r *mutationResolver) UpdateClient(ctx context.Context, id int, input generated.ClientInput) (*generated.Client, error) {
-	object := generated.Client{ID: id}
+	var object model.Client
+	object.ID = id
 	object.UpdateFrom(input)
 	err := Db.Model(&object).Updates(object).Error
-	return &object, err
+	return &object.Client, err
 }
 
 // DeleteClient is the resolver for the deleteClient field.
 func (r *mutationResolver) DeleteClient(ctx context.Context, id int) (*generated.Client, error) {
-	var object generated.Client
+	var object model.Client
 	err := Db.Delete(&object, id).Error
-	return &object, err
+	return &object.Client, err
 }
 
 // CreateBarber is the resolver for the createBarber field.
 func (r *mutationResolver) CreateBarber(ctx context.Context, input generated.BarberInput) (*generated.Barber, error) {
-	var object generated.Barber
+	var object model.Barber
 	object.UpdateFrom(input)
 	err := Db.Create(&object).Error
-	return &object, err
+	return &object.Barber, err
 }
 
 // UpdateBarber is the resolver for the updateBarber field.
 func (r *mutationResolver) UpdateBarber(ctx context.Context, id int, input generated.BarberInput) (*generated.Barber, error) {
-	object := generated.Barber{ID: id}
+	var object model.Barber
+	object.ID = id
 	object.UpdateFrom(input)
 	err := Db.Model(&object).Updates(object).Error
-	return &object, err
+	return &object.Barber, err
 }
 
 // DeleteBarber is the resolver for the deleteBarber field.
 func (r *mutationResolver) DeleteBarber(ctx context.Context, id int) (*generated.Barber, error) {
-	var object generated.Barber
+	var object model.Barber
 	err := Db.Delete(&object, id).Error
-	return &object, err
+	return &object.Barber, err
 }
 
 // CreateAttendance is the resolver for the createAttendance field.
 func (r *mutationResolver) CreateAttendance(ctx context.Context, input generated.AttendanceInput) (*generated.Attendance, error) {
-	var object generated.Attendance
+	var object model.Attendance
 	object.UpdateFrom(input)
-	err := Db.Create(&object).Error
-	return &object, err
+	if err := Db.Create(&object).Error; err != nil {
+		return nil, err
+	}
+	err := Db.Preload(clause.Associations).First(&object).Error
+	return &object.Attendance, err
 }
 
 // UpdateAttendance is the resolver for the updateAttendance field.
 func (r *mutationResolver) UpdateAttendance(ctx context.Context, id int, input generated.AttendanceInput) (*generated.Attendance, error) {
-	object := generated.Attendance{ID: id}
+	var object model.Attendance
+	object.ID = id
 	object.UpdateFrom(input)
-	err := Db.Model(&object).Updates(object).Error
-	return &object, err
+	if err := Db.Model(&object).Updates(object).Error; err != nil {
+		return nil, err
+	}
+	err := Db.Preload(clause.Associations).First(&object).Error
+	return &object.Attendance, err
 }
 
 // DeleteAttendance is the resolver for the deleteAttendance field.
 func (r *mutationResolver) DeleteAttendance(ctx context.Context, id int) (*generated.Attendance, error) {
-	var object generated.Attendance
+	var object model.Attendance
 	err := Db.Delete(&object, id).Error
-	return &object, err
+	return &object.Attendance, err
 }
 
 // AddAttendanceServices is the resolver for the addAttendanceServices field.
 func (r *mutationResolver) AddAttendanceServices(ctx context.Context, id int, serviceIDs []int) (*generated.Attendance, error) {
-	var attendance generated.Attendance
-	var services []generated.Service
-	if len(serviceIDs) == 0 {
-		return nil, errors.New("at least one service ID must be provided")
-	} else if err := Db.First(&attendance, id).Error; err != nil {
+	var attendance model.Attendance
+	var services []model.Service
+	if err := Db.Preload(clause.Associations).First(&attendance, id).Error; err != nil {
 		return nil, err
 	} else if err = Db.Find(&services, serviceIDs).Error; err != nil {
 		return nil, err
 	}
 	err := Db.Model(&attendance).Association("Services").Append(&services)
-	return &attendance, err
+	return &attendance.Attendance, err
 }
 
 // Mutation returns generated.MutationResolver implementation.

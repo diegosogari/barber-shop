@@ -7,13 +7,10 @@ type Attendance struct {
 	CreatedAt  int        `json:"createdAt"`
 	UpdatedAt  int        `json:"updatedAt"`
 	DeletedAt  *int       `json:"deletedAt"`
-	ShopID     int        `json:"shopID"`
-	BarberID   int        `json:"barberID"`
-	ClientID   int        `json:"clientID"`
 	Shop       *Shop      `json:"shop"`
 	Barber     *Barber    `json:"barber"`
 	Client     *Client    `json:"client"`
-	AttendedAt int        `json:"attendedAt" gorm:"autoCreateTime"`
+	AttendedAt int        `json:"attendedAt"`
 	Notes      string     `json:"notes"`
 	Services   []*Service `json:"services" gorm:"many2many:attendance_services;"`
 }
@@ -67,14 +64,13 @@ type ClientInput struct {
 }
 
 type Service struct {
-	ID          int           `json:"id"`
-	CreatedAt   int           `json:"createdAt"`
-	UpdatedAt   int           `json:"updatedAt"`
-	DeletedAt   *int          `json:"deletedAt"`
-	Name        string        `json:"name"`
-	Cost        int           `json:"cost" gorm:"default:30"`
-	Notes       string        `json:"notes"`
-	Attendances []*Attendance `json:"-" gorm:"many2many:attendance_services;"`
+	ID        int    `json:"id"`
+	CreatedAt int    `json:"createdAt"`
+	UpdatedAt int    `json:"updatedAt"`
+	DeletedAt *int   `json:"deletedAt"`
+	Name      string `json:"name"`
+	Cost      int    `json:"cost"`
+	Notes     string `json:"notes"`
 }
 
 type ServiceInput struct {

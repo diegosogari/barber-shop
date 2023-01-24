@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dsogari/barber-shop/graph/generated"
+	"github.com/dsogari/barber-shop/graph/model"
 	"gorm.io/gorm"
 )
 
-// This file will not be regenerated automatically.
-//
-// It serves as dependency injection for your app, add any dependencies you require here.
+//go:generate gqlgen
 
 type Resolver struct{}
 
@@ -18,11 +16,11 @@ var Db *gorm.DB
 
 func MigrateSchema(db *gorm.DB) {
 	Db = db
-	Db.AutoMigrate(&generated.Shop{})
-	Db.AutoMigrate(&generated.Barber{})
-	Db.AutoMigrate(&generated.Service{})
-	Db.AutoMigrate(&generated.Client{})
-	Db.AutoMigrate(&generated.Attendance{})
+	Db.AutoMigrate(&model.Shop{})
+	Db.AutoMigrate(&model.Barber{})
+	Db.AutoMigrate(&model.Service{})
+	Db.AutoMigrate(&model.Client{})
+	Db.AutoMigrate(&model.Attendance{})
 }
 
 func getIntArray(columnName string, array []int) string {
