@@ -1,22 +1,22 @@
 type Mutation {
   createShop(input: ShopInput!): Shop!
   updateShop(id: Int!, input: ShopInput!): Shop!
-  deleteShop(id: Int!): Shop!
+  deleteShop(id: Int!): Boolean!
   
   createService(input: ServiceInput!): Service!
   updateService(id: Int!, input: ServiceInput!): Service!
-  deleteService(id: Int!): Service!
+  deleteService(id: Int!): Boolean!
   
   createClient(input: ClientInput!): Client!
   updateClient(id: Int!, input: ClientInput!): Client!
-  deleteClient(id: Int!): Client!
+  deleteClient(id: Int!): Boolean!
   
   createBarber(input: BarberInput!): Barber!
   updateBarber(id: Int!, input: BarberInput!): Barber!
-  deleteBarber(id: Int!): Barber!
+  deleteBarber(id: Int!): Boolean!
   
   createAttendance(input: AttendanceInput!): Attendance!
   updateAttendance(id: Int!, input: AttendanceInput!): Attendance!
-  deleteAttendance(id: Int!): Attendance!
+  deleteAttendance(id: Int!): Boolean!
   addAttendanceServices(id: Int!, serviceIDs: [Int!]!): Attendance!
 }

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dsogari/barber-shop/graph/model"
+	"github.com/dsogari/barber-shop/graph/generated"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 //go:generate gqlgen
@@ -14,13 +15,48 @@ type Resolver struct{}
 
 var Db *gorm.DB
 
+type Object interface {
+	generated.Shop | generated.Service | generated.Client | generated.Barber | generated.Attendance
+}
+
+func ListObjects[T Object]() (objects []*T, err error) {
+	err = Db.Preload(clause.Associations).Find(&objects).Error
+	return
+}
+
+func GetObject[T Object](id int) (object *T, err error) {
+	err = Db.Preload(clause.Associations).First(&object, id).Error
+	return
+}
+
+func CreateObject[T Object](object *T) error {
+	if err := Db.Create(object).Error; err != nil {
+		return err
+	}
+	return Db.Preload(clause.Associations).First(object).Error
+}
+
+func UpdateObject[T Object](object *T) error {
+	if err := Db.Model(object).Updates(object).Error; err != nil {
+		return err
+	}
+	return Db.Preload(clause.Associations).First(object).Error
+}
+
+func DeleteObject[T Object](id int) (result bool, err error) {
+	var object T
+	err = Db.Delete(&object, id).Error
+	result = err == nil
+	return
+}
+
 func MigrateSchema(db *gorm.DB) {
 	Db = db
-	Db.AutoMigrate(&model.Shop{})
-	Db.AutoMigrate(&model.Barber{})
-	Db.AutoMigrate(&model.Service{})
-	Db.AutoMigrate(&model.Client{})
-	Db.AutoMigrate(&model.Attendance{})
+	Db.AutoMigrate(&generated.Shop{})
+	Db.AutoMigrate(&generated.Barber{})
+	Db.AutoMigrate(&generated.Service{})
+	Db.AutoMigrate(&generated.Client{})
+	Db.AutoMigrate(&generated.Attendance{})
 }
 
 func getIntArray(columnName string, array []int) string {

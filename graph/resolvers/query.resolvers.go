@@ -8,125 +8,67 @@ import (
 	"context"
 
 	"github.com/dsogari/barber-shop/graph/generated"
-	"github.com/dsogari/barber-shop/graph/model"
 	"gorm.io/gorm/clause"
 )
 
 // ListShop is the resolver for the listShop field.
 func (r *queryResolver) ListShop(ctx context.Context) ([]*generated.Shop, error) {
-	var objects []model.Shop
-	if err := Db.Find(&objects).Error; err != nil {
-		return nil, err
-	}
-	var result = make([]*generated.Shop, len(objects))
-	for i := 0; i < len(objects); i++ {
-		result[i] = &objects[i].Shop
-	}
-	return result, nil
+	return ListObjects[generated.Shop]()
 }
 
 // GetShop is the resolver for the getShop field.
 func (r *queryResolver) GetShop(ctx context.Context, id int) (*generated.Shop, error) {
-	var object model.Shop
-	err := Db.First(&object, id).Error
-	return &object.Shop, err
+	return GetObject[generated.Shop](id)
 }
 
 // ListService is the resolver for the listService field.
 func (r *queryResolver) ListService(ctx context.Context) ([]*generated.Service, error) {
-	var objects []model.Service
-	if err := Db.Find(&objects).Error; err != nil {
-		return nil, err
-	}
-	var result = make([]*generated.Service, len(objects))
-	for i := 0; i < len(objects); i++ {
-		result[i] = &objects[i].Service
-	}
-	return result, nil
+	return ListObjects[generated.Service]()
 }
 
 // GetService is the resolver for the getService field.
 func (r *queryResolver) GetService(ctx context.Context, id int) (*generated.Service, error) {
-	var object model.Service
-	err := Db.First(&object, id).Error
-	return &object.Service, err
+	return GetObject[generated.Service](id)
 }
 
 // ListClient is the resolver for the listClient field.
 func (r *queryResolver) ListClient(ctx context.Context) ([]*generated.Client, error) {
-	var objects []model.Client
-	if err := Db.Find(&objects).Error; err != nil {
-		return nil, err
-	}
-	var result = make([]*generated.Client, len(objects))
-	for i := 0; i < len(objects); i++ {
-		result[i] = &objects[i].Client
-	}
-	return result, nil
+	return ListObjects[generated.Client]()
 }
 
 // GetClient is the resolver for the getClient field.
 func (r *queryResolver) GetClient(ctx context.Context, id int) (*generated.Client, error) {
-	var object model.Client
-	err := Db.First(&object, id).Error
-	return &object.Client, err
+	return GetObject[generated.Client](id)
 }
 
 // ListBarber is the resolver for the listBarber field.
 func (r *queryResolver) ListBarber(ctx context.Context) ([]*generated.Barber, error) {
-	var objects []model.Barber
-	if err := Db.Find(&objects).Error; err != nil {
-		return nil, err
-	}
-	var result = make([]*generated.Barber, len(objects))
-	for i := 0; i < len(objects); i++ {
-		result[i] = &objects[i].Barber
-	}
-	return result, nil
+	return ListObjects[generated.Barber]()
 }
 
 // GetBarber is the resolver for the getBarber field.
 func (r *queryResolver) GetBarber(ctx context.Context, id int) (*generated.Barber, error) {
-	var object model.Barber
-	err := Db.First(&object, id).Error
-	return &object.Barber, err
+	return GetObject[generated.Barber](id)
 }
 
 // ListAttendance is the resolver for the listAttendance field.
 func (r *queryResolver) ListAttendance(ctx context.Context) ([]*generated.Attendance, error) {
-	var objects []model.Attendance
-	if err := Db.Preload(clause.Associations).Find(&objects).Error; err != nil {
-		return nil, err
-	}
-	var result = make([]*generated.Attendance, len(objects))
-	for i := 0; i < len(objects); i++ {
-		result[i] = &objects[i].Attendance
-	}
-	return result, nil
+	return ListObjects[generated.Attendance]()
 }
 
 // GetAttendance is the resolver for the getAttendance field.
 func (r *queryResolver) GetAttendance(ctx context.Context, id int) (*generated.Attendance, error) {
-	var object model.Attendance
-	err := Db.Preload(clause.Associations).First(&object, id).Error
-	return &object.Attendance, err
+	return GetObject[generated.Attendance](id)
 }
 
 // SearchAttendance is the resolver for the searchAttendance field.
 func (r *queryResolver) SearchAttendance(ctx context.Context, input generated.AttendanceSearchInput) ([]*generated.Attendance, error) {
-	var objects []model.Attendance
-	if err := Db.Preload(clause.Associations).Find(&objects,
-		"attended_at BETWEEN ? AND ?"+
-			getIntArray("shop_id", input.ShopIDs)+
-			getIntArray("barber_id", input.BarberIDs)+
-			getIntArray("client_id", input.ClientIDs), input.Begin, input.End).Error; err != nil {
-		return nil, err
-	}
-	var result = make([]*generated.Attendance, len(objects))
-	for i := 0; i < len(objects); i++ {
-		result[i] = &objects[i].Attendance
-	}
-	return result, nil
+	var objects []*generated.Attendance
+	err := Db.Preload(clause.Associations).Find(&objects, "attended_at BETWEEN ? AND ?"+
+		getIntArray("shop_id", input.ShopIDs)+
+		getIntArray("barber_id", input.BarberIDs)+
+		getIntArray("client_id", input.ClientIDs), input.Begin, input.End).Error
+	return objects, err
 }
 
 // Query returns generated.QueryResolver implementation.

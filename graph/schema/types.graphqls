@@ -6,6 +6,7 @@ type Shop {
     address: String!
     phoneNumber: String!
     notes: String!
+    attendances: [Attendance!]!
 }
 
 type Service {
@@ -16,6 +17,7 @@ type Service {
     name: String!
     cost: Int!
     notes: String!
+    attendances: [Attendance!]!
 }
 
 type Client {
@@ -26,6 +28,7 @@ type Client {
     name: String!
     phoneNumber: String!
     notes: String!
+    attendances: [Attendance!]!
 }
 
 type Barber {
@@ -36,6 +39,7 @@ type Barber {
     name: String!
     phoneNumber: String!
     notes: String!
+    attendances: [Attendance!]!
 }
 
 type Attendance {
