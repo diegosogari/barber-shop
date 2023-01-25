@@ -1,0 +1,36 @@
+version: '3'
+services:
+  app:
+    image: dsogari/barber-shop
+    volumes:
+      - "myvol:/data"
+    command:
+      - "-db_filename=/data/barber.db"
+    ports:
+      - "8080"
+    networks: 
+      - mynet
+    deploy:
+      replicas: 3
+    restart: on-failure
+
+  nginx:
+    image: nginx
+    volumes:
+      - "./nginx:/etc/nginx"
+    ports:
+      - "80:80"
+    networks: 
+      - mynet
+    depends_on:
+      - "app"
+    deploy:
+      replicas: 1
+    restart: on-failure
+
+volumes:
+  myvol:
+
+networks: 
+  mynet:
+    driver: bridge

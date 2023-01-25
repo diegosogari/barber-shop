@@ -17,7 +17,7 @@ var dbFilename string
 var serverPort string
 
 func SetupFlags() {
-	flag.StringVar(&dbFilename, "db_filename", "test.db", "Path to the database file")
+	flag.StringVar(&dbFilename, "db_filename", "data.db", "Path to the database file")
 	flag.StringVar(&serverPort, "server_port", "8080", "Port to serve the GraphQL API")
 	flag.Parse()
 }

@@ -137,19 +137,19 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateShop(ctx context.Context, input ShopInput) (*Shop, error)
 	UpdateShop(ctx context.Context, id int, input ShopInput) (*Shop, error)
-	DeleteShop(ctx context.Context, id int) (bool, error)
+	DeleteShop(ctx context.Context, id int) (*Shop, error)
 	CreateService(ctx context.Context, input ServiceInput) (*Service, error)
 	UpdateService(ctx context.Context, id int, input ServiceInput) (*Service, error)
-	DeleteService(ctx context.Context, id int) (bool, error)
+	DeleteService(ctx context.Context, id int) (*Service, error)
 	CreateClient(ctx context.Context, input ClientInput) (*Client, error)
 	UpdateClient(ctx context.Context, id int, input ClientInput) (*Client, error)
-	DeleteClient(ctx context.Context, id int) (bool, error)
+	DeleteClient(ctx context.Context, id int) (*Client, error)
 	CreateBarber(ctx context.Context, input BarberInput) (*Barber, error)
 	UpdateBarber(ctx context.Context, id int, input BarberInput) (*Barber, error)
-	DeleteBarber(ctx context.Context, id int) (bool, error)
+	DeleteBarber(ctx context.Context, id int) (*Barber, error)
 	CreateAttendance(ctx context.Context, input AttendanceInput) (*Attendance, error)
 	UpdateAttendance(ctx context.Context, id int, input AttendanceInput) (*Attendance, error)
-	DeleteAttendance(ctx context.Context, id int) (bool, error)
+	DeleteAttendance(ctx context.Context, id int) (*Attendance, error)
 	AddAttendanceServices(ctx context.Context, id int, serviceIDs []int) (*Attendance, error)
 }
 type QueryResolver interface {
@@ -891,23 +891,23 @@ input AttendanceSearchInput {
 	{Name: "../schema/mutation.graphqls", Input: `type Mutation {
   createShop(input: ShopInput!): Shop!
   updateShop(id: Int!, input: ShopInput!): Shop!
-  deleteShop(id: Int!): Boolean!
+  deleteShop(id: Int!): Shop!
   
   createService(input: ServiceInput!): Service!
   updateService(id: Int!, input: ServiceInput!): Service!
-  deleteService(id: Int!): Boolean!
+  deleteService(id: Int!): Service!
   
   createClient(input: ClientInput!): Client!
   updateClient(id: Int!, input: ClientInput!): Client!
-  deleteClient(id: Int!): Boolean!
+  deleteClient(id: Int!): Client!
   
   createBarber(input: BarberInput!): Barber!
   updateBarber(id: Int!, input: BarberInput!): Barber!
-  deleteBarber(id: Int!): Boolean!
+  deleteBarber(id: Int!): Barber!
   
   createAttendance(input: AttendanceInput!): Attendance!
   updateAttendance(id: Int!, input: AttendanceInput!): Attendance!
-  deleteAttendance(id: Int!): Boolean!
+  deleteAttendance(id: Int!): Attendance!
   addAttendanceServices(id: Int!, serviceIDs: [Int!]!): Attendance!
 }
 `, BuiltIn: false},
@@ -2853,9 +2853,9 @@ func (ec *executionContext) _Mutation_deleteShop(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*Shop)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNShop2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐShop(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_deleteShop(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2865,7 +2865,25 @@ func (ec *executionContext) fieldContext_Mutation_deleteShop(ctx context.Context
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Shop_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Shop_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Shop_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Shop_deletedAt(ctx, field)
+			case "address":
+				return ec.fieldContext_Shop_address(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Shop_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Shop_notes(ctx, field)
+			case "attendances":
+				return ec.fieldContext_Shop_attendances(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Shop", field.Name)
 		},
 	}
 	defer func() {
@@ -3054,9 +3072,9 @@ func (ec *executionContext) _Mutation_deleteService(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*Service)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNService2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐService(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_deleteService(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3066,7 +3084,25 @@ func (ec *executionContext) fieldContext_Mutation_deleteService(ctx context.Cont
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Service_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Service_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Service_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Service_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Service_name(ctx, field)
+			case "cost":
+				return ec.fieldContext_Service_cost(ctx, field)
+			case "notes":
+				return ec.fieldContext_Service_notes(ctx, field)
+			case "attendances":
+				return ec.fieldContext_Service_attendances(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Service", field.Name)
 		},
 	}
 	defer func() {
@@ -3255,9 +3291,9 @@ func (ec *executionContext) _Mutation_deleteClient(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*Client)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNClient2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐClient(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_deleteClient(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3267,7 +3303,25 @@ func (ec *executionContext) fieldContext_Mutation_deleteClient(ctx context.Conte
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Client_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Client_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Client_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Client_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Client_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Client_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Client_notes(ctx, field)
+			case "attendances":
+				return ec.fieldContext_Client_attendances(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Client", field.Name)
 		},
 	}
 	defer func() {
@@ -3456,9 +3510,9 @@ func (ec *executionContext) _Mutation_deleteBarber(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*Barber)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNBarber2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐBarber(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_deleteBarber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3468,7 +3522,25 @@ func (ec *executionContext) fieldContext_Mutation_deleteBarber(ctx context.Conte
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Barber_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Barber_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Barber_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Barber_deletedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_Barber_name(ctx, field)
+			case "phoneNumber":
+				return ec.fieldContext_Barber_phoneNumber(ctx, field)
+			case "notes":
+				return ec.fieldContext_Barber_notes(ctx, field)
+			case "attendances":
+				return ec.fieldContext_Barber_attendances(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Barber", field.Name)
 		},
 	}
 	defer func() {
@@ -3665,9 +3737,9 @@ func (ec *executionContext) _Mutation_deleteAttendance(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*Attendance)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalNAttendance2ᚖgithubᚗcomᚋdsogariᚋbarberᚑshopᚋgraphᚋgeneratedᚐAttendance(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_deleteAttendance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3677,7 +3749,29 @@ func (ec *executionContext) fieldContext_Mutation_deleteAttendance(ctx context.C
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Attendance_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Attendance_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Attendance_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Attendance_deletedAt(ctx, field)
+			case "shop":
+				return ec.fieldContext_Attendance_shop(ctx, field)
+			case "barber":
+				return ec.fieldContext_Attendance_barber(ctx, field)
+			case "client":
+				return ec.fieldContext_Attendance_client(ctx, field)
+			case "attendedAt":
+				return ec.fieldContext_Attendance_attendedAt(ctx, field)
+			case "notes":
+				return ec.fieldContext_Attendance_notes(ctx, field)
+			case "services":
+				return ec.fieldContext_Attendance_services(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Attendance", field.Name)
 		},
 	}
 	defer func() {

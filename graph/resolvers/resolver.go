@@ -43,10 +43,11 @@ func UpdateObject[T Object](object *T) error {
 	return Db.Preload(clause.Associations).First(object).Error
 }
 
-func DeleteObject[T Object](id int) (result bool, err error) {
-	var object T
+func DeleteObject[T Object](id int) (object *T, err error) {
+	if err := Db.Preload(clause.Associations).First(&object, id).Error; err != nil {
+		return nil, err
+	}
 	err = Db.Delete(&object, id).Error
-	result = err == nil
 	return
 }
 

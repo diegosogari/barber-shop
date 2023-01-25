@@ -29,7 +29,7 @@ func (r *mutationResolver) UpdateShop(ctx context.Context, id int, input generat
 }
 
 // DeleteShop is the resolver for the deleteShop field.
-func (r *mutationResolver) DeleteShop(ctx context.Context, id int) (bool, error) {
+func (r *mutationResolver) DeleteShop(ctx context.Context, id int) (*generated.Shop, error) {
 	return DeleteObject[generated.Shop](id)
 }
 
@@ -51,7 +51,7 @@ func (r *mutationResolver) UpdateService(ctx context.Context, id int, input gene
 }
 
 // DeleteService is the resolver for the deleteService field.
-func (r *mutationResolver) DeleteService(ctx context.Context, id int) (bool, error) {
+func (r *mutationResolver) DeleteService(ctx context.Context, id int) (*generated.Service, error) {
 	return DeleteObject[generated.Service](id)
 }
 
@@ -73,7 +73,7 @@ func (r *mutationResolver) UpdateClient(ctx context.Context, id int, input gener
 }
 
 // DeleteClient is the resolver for the deleteClient field.
-func (r *mutationResolver) DeleteClient(ctx context.Context, id int) (bool, error) {
+func (r *mutationResolver) DeleteClient(ctx context.Context, id int) (*generated.Client, error) {
 	return DeleteObject[generated.Client](id)
 }
 
@@ -95,7 +95,7 @@ func (r *mutationResolver) UpdateBarber(ctx context.Context, id int, input gener
 }
 
 // DeleteBarber is the resolver for the deleteBarber field.
-func (r *mutationResolver) DeleteBarber(ctx context.Context, id int) (bool, error) {
+func (r *mutationResolver) DeleteBarber(ctx context.Context, id int) (*generated.Barber, error) {
 	return DeleteObject[generated.Barber](id)
 }
 
@@ -117,7 +117,7 @@ func (r *mutationResolver) UpdateAttendance(ctx context.Context, id int, input g
 }
 
 // DeleteAttendance is the resolver for the deleteAttendance field.
-func (r *mutationResolver) DeleteAttendance(ctx context.Context, id int) (bool, error) {
+func (r *mutationResolver) DeleteAttendance(ctx context.Context, id int) (*generated.Attendance, error) {
 	return DeleteObject[generated.Attendance](id)
 }
 
