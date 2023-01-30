@@ -47,6 +47,9 @@ func setupServer() {
 	config := generated.Config{Resolvers: &resolvers.Resolver{}}
 	http.Handle("/query", handler.NewDefaultServer(generated.NewExecutableSchema(config)))
 	http.Handle("/play", playground.Handler("GraphQL playground", "/query"))
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("Ok"))
+	})
 
 	if fs, err := fs.Sub(uiFS, "react-app/build"); err != nil {
 		log.Fatal("failed to get ui fs", err)
